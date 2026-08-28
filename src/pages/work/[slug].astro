@@ -1,0 +1,76 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE, withBase } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('work', (e) => e.data.caseStudy);
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const title = `${entry.data.title} — ${SITE.name}`;
+const media = entry.data.media ?? [];
+---
+
+<Base title={title} description={entry.data.blurb}>
+  <main id="main" class="frame case">
+    <article class="section case-article">
+      <p class="back">
+        <a class="mono-label wipe-link" href={withBase('/#work')}>← Back to the work</a>
+      </p>
+      <div class="section-head">
+        <p class="mono-label">{entry.data.meta}</p>
+      </div>
+      <h1 class="case-title">{entry.data.title}</h1>
+      <div class="prose">
+        <Content />
+      </div>
+
+      {
+        media.length > 0 && (
+          <div class="figure-grid">
+            {media.map((m) => (
+              <figure class={`media-cell${m.span2 ? ' span-2' : ''}`}>
+                <img
+                  src={withBase(m.src)}
+                  alt={m.alt}
+                  width={m.width}
+                  height={m.height}
+                  loading="lazy"
+                />
+                <figcaption>{m.caption}</figcaption>
+              </figure>
+            ))}
+          </div>
+        )
+      }
+    </article>
+  </main>
+</Base>
+
+<style>
+  .case {
+    min-height: 100vh;
+  }
+  .case-article {
+    border-top: 0;
+    padding-top: var(--space-4);
+  }
+  .back {
+    margin-bottom: var(--space-4);
+  }
+  .back a {
+    display: inline-block;
+    padding-block: 0.95rem;
+  }
+  .case-title {
+    font-size: clamp(2.25rem, 6vw, 5rem);
+    margin-bottom: var(--space-3);
+  }
+</style>

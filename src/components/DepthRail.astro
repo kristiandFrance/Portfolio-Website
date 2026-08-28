@@ -1,0 +1,28 @@
+---
+/**
+ * Recursion-level scroll indicator. Each label is a real depth:
+ * the further down the page, the deeper into the tree.
+ */
+const nodes = [
+  { level: 'L0', href: '#top', label: 'Top' },
+  { level: 'L1', href: '#work', label: 'Shipped work' },
+  { level: 'L2', href: '#projects', label: 'Projects' },
+  { level: 'L3', href: '#about', label: 'About' },
+  { level: 'L4', href: '#contact', label: 'Contact' },
+];
+---
+
+<nav aria-label="Page depth">
+  <ul class="depth-rail">
+    {
+      nodes.map((n, i) => (
+        <li class={i === 0 ? 'active' : undefined}>
+          <a href={n.href}>
+            <span aria-hidden="true">{n.level}</span>
+            <span class="sr-only">{n.label}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

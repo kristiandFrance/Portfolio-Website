@@ -1,0 +1,76 @@
+---
+import { SITE, withBase } from '../lib/site';
+
+const home = withBase('/');
+---
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="wordmark" href={home}>Kristian de France</a>
+    <nav aria-label="Site">
+      <ul>
+        <li><a class="mono-label node-label" href={`${home}#work`}>work</a></li>
+        <li><a class="mono-label node-label" href={`${home}#about`}>about</a></li>
+        <li><a class="mono-label node-label" href={`${home}#contact`}>contact</a></li>
+      </ul>
+    </nav>
+    <div class="ext">
+      <a class="mono-label wipe-link" href={SITE.github} rel="me noopener">GitHub&nbsp;↗</a>
+      <a class="mono-label wipe-link" href={SITE.linkedin} rel="me noopener">LinkedIn&nbsp;↗</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+  .header-inner {
+    max-width: var(--frame-max);
+    margin-inline: auto;
+    height: var(--header-h);
+    padding-inline: var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .wordmark {
+    font-weight: 520;
+    font-size: 0.9375rem;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  nav ul {
+    display: flex;
+    gap: clamp(0.75rem, 2.5vw, 1.75rem);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  nav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    transition: color 0.3s var(--ease);
+    display: inline-block;
+    padding: 0.9rem 0.1rem; /* ≥44px touch target */
+  }
+  nav a:hover,
+  nav a:focus-visible {
+    color: var(--signal);
+  }
+  .ext {
+    display: none;
+    gap: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .ext {
+      display: flex;
+    }
+  }
+</style>

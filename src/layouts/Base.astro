@@ -1,0 +1,81 @@
+---
+import '../styles/global.css';
+import { SITE, withBase } from '../lib/site';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import bricolageUrl from '../assets/fonts/bricolage-grotesque-latin-wght-normal.woff2?url';
+import monoUrl from '../assets/fonts/jetbrains-mono-latin-wght-normal.woff2?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** chaptered scroll-snap (index page only) */
+  snap?: boolean;
+}
+
+const { title = SITE.title, description = SITE.description, snap = false } = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(withBase('/og.png'), Astro.site);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: SITE.name,
+  jobTitle: 'Software Engineer',
+  email: `mailto:${SITE.email}`,
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Auckland',
+    addressCountry: 'NZ',
+  },
+  url: Astro.site?.href,
+  sameAs: [SITE.github, SITE.linkedin],
+};
+---
+
+<!doctype html>
+<html lang="en" class:list={['no-js', { snap }]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0d0e10" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <link rel="preload" href={bricolageUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={monoUrl} as="font" type="font/woff2" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A sparse voxel octree lattice next to the name Kristian de France, software engineer."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <script is:inline>
+      document.documentElement.classList.replace('no-js', 'js');
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Header />
+    <slot />
+    <Footer />
+    <script>
+      import '../scripts/motion.js';
+    </script>
+  </body>
+</html>

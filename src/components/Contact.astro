@@ -1,0 +1,68 @@
+---
+import { SITE } from '../lib/site';
+
+const links = [
+  { label: 'GitHub ↗', href: SITE.github },
+  { label: 'LinkedIn ↗', href: SITE.linkedin },
+  { label: "Steam — You're Here Again ↗", href: SITE.steam },
+  { label: 'itch — Tangle Tails ↗', href: SITE.itch },
+];
+---
+
+<section id="contact" class="section contact chapter" data-octree-state="contact">
+  <div class="section-head">
+    <div class="head-meta" data-reveal>
+      <p class="mono-label"><span class="lvl">L4</span> · Contact</p>
+      <p class="mono-label">Open to engineering roles — Auckland or remote · <span class="hatch">////////</span></p>
+    </div>
+    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
+      <span class="n">06</span><span class="d">/ 06</span>
+    </div>
+  </div>
+
+  <h2 data-reveal>Say hello.</h2>
+  <p class="mail-line" data-reveal style="--i: 1">
+    <a class="wipe-link mail-link" href={`mailto:${SITE.email}`}>{SITE.email}</a>
+  </p>
+
+  <ul class="contact-links" data-reveal style="--i: 2">
+    {
+      links.map((l) => (
+        <li>
+          <a class="mono-label wipe-link" href={l.href} rel="noopener">
+            {l.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .contact {
+    justify-content: center;
+  }
+  .mail-line {
+    margin-top: var(--space-3);
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+  .mail-link {
+    font-size: clamp(1.35rem, 4.5vw, 3.5rem);
+    font-weight: 420;
+    letter-spacing: -0.025em;
+    padding-bottom: 0.1em;
+  }
+  .contact-links {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+  }
+  .contact-links a {
+    display: inline-block;
+    padding-block: 0.95rem; /* touch target ≥44px */
+  }
+</style>

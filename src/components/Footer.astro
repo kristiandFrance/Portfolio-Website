@@ -1,0 +1,39 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <svg viewBox="0 0 1200 132" role="img" aria-label="Kristian de France" class="giant-wordmark">
+      <text x="0" y="106" textLength="1200" lengthAdjust="spacingAndGlyphs">Kristian de France</text>
+    </svg>
+    <p class="copyright mono-label">© {year} Kristian de France</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--rule);
+  }
+  .footer-inner {
+    max-width: var(--frame-max);
+    margin-inline: auto;
+    border-inline: 1px solid var(--rule);
+    padding: var(--space-4) var(--gutter) var(--space-3);
+  }
+  .giant-wordmark {
+    width: 100%;
+    height: auto;
+  }
+  .giant-wordmark text {
+    font-family: var(--font-display);
+    font-size: 118px;
+    font-weight: 480;
+    letter-spacing: -0.03em;
+    fill: var(--ink);
+  }
+  .copyright {
+    margin-top: var(--space-2);
+    opacity: 0.5;
+  }
+</style>

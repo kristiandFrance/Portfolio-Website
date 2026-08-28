@@ -1,0 +1,83 @@
+---
+import { getCollection } from 'astro:content';
+import { withBase } from '../lib/site';
+
+const entries = (await getCollection('work', (e) => e.data.card)).sort(
+  (a, b) => a.data.order - b.data.order
+);
+
+function cardHref(entry: (typeof entries)[number]): string | null {
+  if (entry.data.caseStudy) return withBase(`/work/${entry.id}/`);
+  if (entry.data.link) return entry.data.link.href;
+  return null;
+}
+---
+
+<section id="projects" class="section chapter" data-octree-state="projects">
+  <div class="section-head">
+    <div class="head-meta" data-reveal>
+      <p class="mono-label"><span class="lvl">L2</span> · Selected systems</p>
+      <p class="mono-label hover-hint" aria-hidden="true">
+        [hover to subdivide] · <span class="hatch">////////</span>
+      </p>
+    </div>
+    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
+      <span class="n">03</span><span class="d">/ 06</span>
+    </div>
+  </div>
+
+  <h2 data-reveal>Built to be taken apart.</h2>
+
+  <div class="card-grid" data-reveal style="--i: 1">
+    {
+      entries.map((entry) => {
+        const href = cardHref(entry);
+        const external = href !== null && href.startsWith('http');
+        return (
+          <article class="card">
+            <p class="mono-label">{entry.data.meta}</p>
+            <h3 class="card-title">
+              {href ? (
+                <a href={href} rel={external ? 'noopener' : undefined}>
+                  {entry.data.title}
+                  {external ? ' ↗' : ' →'}
+                </a>
+              ) : (
+                entry.data.title
+              )}
+            </h3>
+            <p class="blurb soft">{entry.data.blurb}</p>
+            <ul class="card-detail" aria-label="Detail">
+              {entry.data.detail.map((d) => (
+                <li>{d}</li>
+              ))}
+            </ul>
+          </article>
+        );
+      })
+    }
+  </div>
+
+  <p class="also mono-label" data-reveal>
+    Also: multiplayer networking (UDP/TCP · Steam · LAN) · OpenGL, Vulkan and PS4/PS5 pipelines ·
+    Android/Lua shipped to Google Play
+  </p>
+</section>
+
+<style>
+  .card-grid {
+    margin-top: var(--space-3);
+  }
+  .blurb {
+    font-size: 0.9375rem;
+  }
+  .also {
+    margin-top: var(--space-3);
+    max-width: none;
+  }
+  @media (hover: none) {
+    .hover-hint {
+      visibility: hidden;
+    }
+  }
+</style>

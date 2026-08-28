@@ -1,0 +1,185 @@
+---
+import { SITE, withBase } from '../lib/site';
+
+const stats = [
+  { n: '33', label: 'levels' },
+  { n: '3', label: 'bosses' },
+  { n: '10+', label: 'enemy types' },
+  { n: '4', label: 'languages shipped' },
+  { n: '7', label: 'achievements' },
+  { n: '1', label: 'soundtrack DLC' },
+];
+
+const owned = [
+  'Weapon systems',
+  'AI systems',
+  'Audio direction · SFX · music',
+  'VFX systems',
+  'Feedback + bug reporting',
+  'Post-launch · CI/CD',
+];
+
+const clip = withBase('/media/yha-clip.mp4');
+const posterImg = withBase('/media/yha-poster.jpg');
+---
+
+<section id="work" class="section shipped chapter has-col-rule" data-octree-state="shipped">
+  <div class="section-head">
+    <div class="head-meta" data-reveal>
+      <p class="mono-label"><span class="lvl">L1</span> · Shipped — Steam, Early Access</p>
+      <p class="mono-label">13 Dec 2025 · <span class="hatch">////////</span></p>
+    </div>
+    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
+      <span class="n">02</span><span class="d">/ 06</span>
+    </div>
+  </div>
+
+  <h2 data-reveal>You’re Here Again</h2>
+  <p class="lede soft" data-reveal style="--i: 1">
+    A weirdcore, fast-paced movement shooter set in the liminal space between death and whatever
+    follows. Published by Devious Devs, still updated — wall-runs, slides, grapples and slams, with
+    damage that scales with how fast you’re moving.
+  </p>
+
+  <div class="shipped-grid">
+    <div class="col-rule shipped-rule" aria-hidden="true"></div>
+
+    <div class="shipped-owned" data-reveal style="--i: 2">
+      <p class="mono-label owned-title">What I owned</p>
+      <ul class="owned-list">
+        {owned.map((o) => <li class="mono-label">{o}</li>)}
+      </ul>
+      <p class="credit soft">
+        One of a five-developer team — credited on Steam as <code>yodapowers_</code>.
+      </p>
+      <div class="links">
+        <a class="btn" href={SITE.steam} rel="noopener">View on Steam ↗</a>
+        <a class="wipe-link arrow" href={withBase('/work/youre-here-again/')}>Read the case study →</a>
+      </div>
+    </div>
+
+    <figure class="media-cell clip-cell" data-reveal style="--i: 3" data-parallax="0.02">
+      <div class="clip-wrap">
+        <video
+          data-yha-clip
+          src={clip}
+          poster={posterImg}
+          preload="none"
+          muted
+          loop
+          playsinline
+          width="1280"
+          height="720"
+          aria-label="Gameplay clip from You're Here Again (silent). Click to pause."
+        ></video>
+      </div>
+      <figcaption>In-game capture — movement kit vs the liminal space</figcaption>
+    </figure>
+  </div>
+
+  <dl class="stat-row" data-reveal>
+    {
+      stats.map((s) => (
+        <div class="stat">
+          <dd>{s.n}</dd>
+          <dt>{s.label}</dt>
+        </div>
+      ))
+    }
+  </dl>
+  <p class="mono-label lang-note" data-reveal style="--i: 1">
+    English · Simplified Chinese · Russian · Māori
+  </p>
+</section>
+
+<style>
+  .lede {
+    margin-top: var(--space-2);
+  }
+  .shipped-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+  }
+  .shipped-rule {
+    display: none;
+    left: calc(45% - 1px);
+  }
+  @media (min-width: 56rem) {
+    .shipped-grid {
+      grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+      gap: clamp(2rem, 5vw, 4.5rem);
+    }
+    .shipped-rule {
+      display: block;
+    }
+  }
+  .owned-title {
+    margin-bottom: var(--space-2);
+  }
+  .owned-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem 1.5rem;
+  }
+  .owned-list li {
+    color: var(--ink);
+  }
+  .credit {
+    margin-top: var(--space-2);
+    font-size: 0.9375rem;
+  }
+  .credit code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .links {
+    margin-top: var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .lang-note {
+    margin-top: var(--space-2);
+  }
+</style>
+
+<script>
+  /* ambient clip: plays while on screen, click to hold/resume.
+     preload="none" keeps it untouched until it first becomes visible. */
+  const video = document.querySelector('[data-yha-clip]') as HTMLVideoElement | null;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (video) {
+    let userPaused = false;
+
+    video.addEventListener('click', () => {
+      if (video.paused) {
+        userPaused = false;
+        video.play().catch(() => {});
+      } else {
+        userPaused = true;
+        video.pause();
+      }
+    });
+
+    if (!reducedMotion) {
+      const io = new IntersectionObserver(
+        ([e]) => {
+          if (e.isIntersecting && !userPaused) {
+            video.play().catch(() => {});
+          } else if (!e.isIntersecting && !video.paused) {
+            video.pause();
+          }
+        },
+        { threshold: 0.35 }
+      );
+      io.observe(video);
+    }
+  }
+</script>

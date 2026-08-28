@@ -1,0 +1,70 @@
+---
+import { SITE, withBase } from '../lib/site';
+
+const shot = withBase('/media/tangletails.webp');
+---
+
+<section id="jam" class="section jam chapter" data-octree-state="projects">
+  <div class="section-head">
+    <div class="head-meta" data-reveal>
+      <p class="mono-label"><span class="lvl">L2</span> · 48 hours</p>
+      <p class="mono-label">KiwiJam 2026 — 1st place, main theme · <span class="hatch">////////</span></p>
+    </div>
+    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
+      <span class="n">04</span><span class="d">/ 06</span>
+    </div>
+  </div>
+
+  <div class="jam-grid">
+    <div>
+      <h2 class="jam-title" data-reveal>Tangle Tails</h2>
+      <p class="soft" data-reveal style="--i: 1">
+        Theme: <em>Entanglement</em>, with a countdown. Lab mice on cables, tangling themselves to
+        death unless you drag them apart — built in Godot (C#/.NET) by a team of seven against 120+
+        entrants, and it took the main theme prize. I worked across programming, music and sound
+        design. The deep-systems work above takes months; this is what the same brain does in a
+        weekend.
+      </p>
+      <p data-reveal style="--i: 2">
+        <a class="wipe-link arrow" href={SITE.itch} rel="noopener">Play it on itch ↗</a>
+      </p>
+    </div>
+    <figure class="media-cell jam-shot" data-reveal style="--i: 2" data-parallax="0.03">
+      <img
+        src={shot}
+        alt="Tangle Tails gameplay: mice tethered by long colourful cables inside a caged lab pen, with powerup slots along the bottom"
+        width="347"
+        height="199"
+        loading="lazy"
+      />
+      <figcaption>48-hour build — cables mid-tangle</figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .jam-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    align-items: start;
+  }
+  @media (min-width: 56rem) {
+    .jam-grid {
+      grid-template-columns: minmax(0, 1fr) 21.5rem;
+      gap: clamp(2rem, 5vw, 4.5rem);
+    }
+  }
+  .jam-title {
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  }
+  .jam p.soft {
+    margin-top: var(--space-2);
+  }
+  .jam-grid p:last-of-type {
+    margin-top: var(--space-3);
+  }
+  .jam-shot {
+    max-width: 21.5rem;
+  }
+</style>

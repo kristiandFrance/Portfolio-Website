@@ -1,0 +1,40 @@
+---
+const line =
+  'I’ve always enjoyed taking things apart — not just to understand how they work, but why they were built that way and how they could be improved.';
+---
+
+<section class="section statement chapter" data-octree-state="hero" aria-label="Statement">
+  <div class="chapter-count statement-count" aria-hidden="true" data-reveal>
+    <span class="n">01</span><span class="d">/ 06</span>
+  </div>
+  <blockquote class="split" data-parallax="0.05">
+    <p class="sr-only">{line}</p>
+    <p class="statement-text" data-split aria-hidden="true">{line}</p>
+  </blockquote>
+</section>
+
+<style>
+  .statement {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .statement-count {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--gutter);
+  }
+  blockquote {
+    margin: 0;
+    max-width: 56rem;
+  }
+  .statement-text {
+    font-size: clamp(1.6rem, 3.6vw, 3rem);
+    font-weight: 420;
+    letter-spacing: -0.025em;
+    line-height: 1.18;
+    max-width: none;
+    text-wrap: balance;
+  }
+</style>

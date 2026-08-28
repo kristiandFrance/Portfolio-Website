@@ -1,0 +1,75 @@
+---
+const tech = [
+  'C++ · C# · Python · Lua',
+  'Unreal · Unity · Godot',
+  'Git · Linux · Android',
+  'OpenGL · Vulkan · PS4/PS5',
+  'UDP/TCP · Steam API · LAN',
+  'CI/CD · profiling · tooling',
+];
+---
+
+<section id="about" class="section about chapter" data-octree-state="about">
+  <div class="section-head">
+    <div class="head-meta" data-reveal>
+      <p class="mono-label"><span class="lvl">L3</span> · About</p>
+      <p class="mono-label">Auckland, NZ · <span class="hatch">////////</span></p>
+    </div>
+    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
+      <span class="n">05</span><span class="d">/ 06</span>
+    </div>
+  </div>
+
+  <div class="about-body">
+    <h2 class="about-title" data-reveal>About</h2>
+    <div class="about-text" data-reveal style="--i: 1">
+      <p>
+        I’m a systems-oriented engineer in Auckland — four years across gameplay, systems and
+        engine-adjacent code, strongest in C++ and C#. The part I like is the layer underneath: why
+        a structure is shaped the way it is, what it costs, and where it could be better.
+      </p>
+      <p>
+        I studied software engineering at Media Design School (B.S.E, 2023–2025), mentored there in
+        2025 and at NZGDC 2024, and keep showing up to Global Game Jam. Away from a compiler I’m
+        learning Mandarin. New Zealand citizen, based in Auckland.
+      </p>
+      <p>
+        Right now I’m looking for engineering roles — Auckland or remote — where the interesting
+        problems are under the hood.
+      </p>
+    </div>
+
+    <div class="about-tech" data-reveal style="--i: 2">
+      <p class="mono-label tech-title">Tech</p>
+      <ul class="cell-grid cols-3">
+        {tech.map((t) => <li class="cell">{t}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about-title {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+  }
+  .about-text {
+    margin-top: var(--space-3);
+    display: grid;
+    gap: var(--space-2);
+  }
+  .about-text p {
+    color: var(--ink-soft);
+    max-width: 54ch;
+  }
+  .about-tech {
+    margin-top: var(--space-3);
+    max-width: 52rem;
+  }
+  .tech-title {
+    margin-bottom: var(--space-2);
+  }
+  .cell-grid {
+    list-style: none;
+    padding: 0;
+  }
+</style>

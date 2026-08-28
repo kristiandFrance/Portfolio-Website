@@ -1,0 +1,20 @@
+# build output
+dist/
+# generated types
+.astro/
+# dependencies
+node_modules/
+# logs
+npm-debug.log*
+# environment
+.env
+.env.production
+# OS
+.DS_Store
+Thumbs.db
+# local editor/agent config (not needed for the build)
+.claude/
+
+# NOTE: .github/ must stay tracked — it holds the GitHub Pages deploy workflow.
+# NOTE: GitHub rejects files over 100 MB. Keep large raw video (e.g. the
+# 292 MB promotional cut) out of the repo, or use Git LFS for it.

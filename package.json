@@ -1,0 +1,23 @@
+{
+  "name": "kristian-defrance-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.0.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.0.0",
+    "@fontsource-variable/jetbrains-mono": "^5.0.0",
+    "@resvg/resvg-js": "^2.6.0",
+    "fontkit": "^2.0.0",
+    "wawoff2": "^2.0.1"
+  }
+}
