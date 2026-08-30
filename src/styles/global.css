@@ -1,9 +1,9 @@
 /* ============================================================
    Kristian de France — portfolio
    Concept: Subdivision. The octree is the site.
-   v3 — dark instrument: near-black panel, hairline HUD grammar,
-   one amber-copper accent that glows like hot metal. Chaptered
-   scroll locks each section into place.
+   v4 — formal light instrument: cool paper ground, ink hairlines,
+   one copper accent reserved for highlights. Chaptered scroll
+   locks each section into place; nothing blooms, nothing shouts.
    ============================================================ */
 
 /* ---- Fonts (self-hosted, variable) ---- */
@@ -24,20 +24,17 @@
 
 /* ---- Tokens ---- */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* ground + panels: cold near-black, like gunmetal in shadow */
-  --paper: #0d0e10;
-  --paper-lift: #15171a;
-  /* type: cool light greys */
-  --ink: #eef0f2;
-  --ink-soft: #9aa1a9;
-  --rule: rgba(238, 240, 242, 0.1);
-  --rule-strong: rgba(238, 240, 242, 0.22);
-  /* the one accent: amber-copper, worn like edge-lighting */
-  --signal: #f0630f;
-  --signal-dim: rgba(240, 99, 15, 0.12);
-  --glow: rgba(240, 99, 15, 0.4);
+  --paper: #e8e9eb;
+  --paper-lift: #f2f3f4;
+  --ink: #101317;
+  --ink-soft: #5a6169;
+  --rule: rgba(16, 19, 23, 0.14);
+  --rule-strong: rgba(16, 19, 23, 0.28);
+  /* the one accent: deep copper — spent on highlights only */
+  --signal: #b23205;
+  --signal-dim: rgba(178, 50, 5, 0.1);
 
   --font-display: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
@@ -116,7 +113,7 @@ button {
 
 ::selection {
   background: var(--signal);
-  color: #0d0e10;
+  color: var(--paper-lift);
 }
 
 /* ---- Focus (never removed, always visible) ---- */
@@ -146,7 +143,7 @@ button {
   z-index: 100;
   padding: 0.6rem 1rem;
   background: var(--ink);
-  color: var(--paper);
+  color: var(--paper-lift);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   text-decoration: none;
@@ -160,7 +157,7 @@ button {
 h1,
 h2,
 h3 {
-  font-weight: 460;
+  font-weight: 480;
   letter-spacing: -0.03em;
   line-height: 1.02;
   text-wrap: balance;
@@ -189,7 +186,7 @@ p {
 .mono-label {
   font-family: var(--font-mono);
   font-size: var(--size-label);
-  font-weight: 440;
+  font-weight: 460;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -199,13 +196,12 @@ p {
   text-decoration: none;
 }
 
-/* recursion-depth tag inside eyebrows — hot metal marks where you are */
+/* recursion-depth tag inside eyebrows */
 .lvl {
   color: var(--signal);
-  text-shadow: 0 0 14px var(--glow);
 }
 
-/* hatch divider — ESQRD-style band marker */
+/* hatch divider — band marker, quiet */
 .hatch {
   letter-spacing: -0.02em;
   opacity: 0.45;
@@ -266,7 +262,7 @@ p {
   scroll-snap-align: start;
 }
 
-/* section head: eyebrow + meta left, giant thin chapter counter right */
+/* section head: eyebrow + meta left, thin chapter counter right */
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -291,7 +287,7 @@ p {
   line-height: 0.85;
   letter-spacing: -0.02em;
   color: var(--ink);
-  opacity: 0.16;
+  opacity: 0.12;
 }
 .chapter-count .d {
   font-family: var(--font-mono);
@@ -301,7 +297,7 @@ p {
   opacity: 0.7;
 }
 
-/* ---- Buttons: outlined instrument controls, square corners ---- */
+/* ---- Buttons ---- */
 .btn {
   display: inline-block;
   font-family: var(--font-mono);
@@ -309,34 +305,28 @@ p {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
-  border: 1px solid var(--rule-strong);
-  color: var(--ink);
+  border: 1px solid var(--ink);
   padding: 0.8rem 1.4rem;
   min-height: 44px;
   background: transparent;
   transition:
-    border-color 0.3s var(--ease),
+    background-color 0.3s var(--ease),
     color 0.3s var(--ease),
-    box-shadow 0.3s var(--ease),
-    background-color 0.3s var(--ease);
-}
-.btn:hover,
-.btn:focus-visible {
-  border-color: var(--signal);
-  color: var(--signal);
-  box-shadow:
-    0 0 18px rgba(240, 99, 15, 0.22),
-    inset 0 0 14px rgba(240, 99, 15, 0.08);
+    border-color 0.3s var(--ease);
 }
 .btn-primary {
-  border-color: var(--signal);
-  color: var(--signal);
-  background: var(--signal-dim);
+  background: var(--ink);
+  color: var(--paper-lift);
 }
 .btn-primary:hover,
 .btn-primary:focus-visible {
   background: var(--signal);
-  color: #0d0e10;
+  border-color: var(--signal);
+}
+.btn:not(.btn-primary):hover,
+.btn:not(.btn-primary):focus-visible {
+  border-color: var(--signal);
+  color: var(--signal);
 }
 
 /* ---- Reveal motion (one system, one easing) ---- */
@@ -399,7 +389,6 @@ html.no-js .col-rule {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   border: 1px solid var(--rule);
-  background: rgba(21, 23, 26, 0.55);
 }
 .stat {
   display: flex;
@@ -412,7 +401,7 @@ html.no-js .col-rule {
 }
 .stat dd {
   font-size: clamp(1.6rem, 2.8vw, 2.35rem);
-  font-weight: 440;
+  font-weight: 460;
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -424,7 +413,7 @@ html.no-js .col-rule {
   color: var(--ink-soft);
 }
 
-/* ---- Media cells: evidence in a dark instrument tray ---- */
+/* ---- Media cells: evidence in a bordered instrument tray ---- */
 .media-cell {
   border: 1px solid var(--rule);
   background: var(--paper-lift);
@@ -491,13 +480,11 @@ html.no-js .col-rule {
   opacity: 0.55;
   transition:
     opacity 0.3s var(--ease),
-    color 0.3s var(--ease),
-    text-shadow 0.3s var(--ease);
+    color 0.3s var(--ease);
 }
 .depth-rail li.active a {
   color: var(--signal);
   opacity: 1;
-  text-shadow: 0 0 12px var(--glow);
 }
 
 /* ---- Project cards: subdivide on hover/focus ---- */
@@ -522,9 +509,7 @@ html.no-js .col-rule {
   gap: 1rem;
   min-height: 20rem;
   background: transparent;
-  transition:
-    background-color 0.45s var(--ease),
-    box-shadow 0.45s var(--ease);
+  transition: background-color 0.45s var(--ease);
 }
 
 .card::before,
@@ -577,7 +562,6 @@ html.no-js .col-rule {
 .card:hover,
 .card:focus-within {
   background: var(--paper-lift);
-  box-shadow: inset 0 0 32px rgba(240, 99, 15, 0.05);
 }
 .card:hover::before,
 .card:focus-within::before {
@@ -595,12 +579,9 @@ html.no-js .col-rule {
 .card:hover .card-title a,
 .card:focus-within .card-title a {
   color: var(--signal);
-  text-shadow: 0 0 18px var(--glow);
 }
 .card-title a {
-  transition:
-    color 0.3s var(--ease),
-    text-shadow 0.3s var(--ease);
+  transition: color 0.3s var(--ease);
 }
 
 @media (hover: none) {
@@ -673,7 +654,7 @@ html.no-js .col-rule {
 }
 .prose strong {
   color: var(--ink);
-  font-weight: 540;
+  font-weight: 560;
 }
 .prose ul {
   padding-left: 1.1rem;

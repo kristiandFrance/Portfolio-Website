@@ -116,7 +116,7 @@ const poster = withBase('/poster-octree.svg');
   import { initOctree } from '../scripts/octree-scene.js';
 
   const canvas = document.querySelector('[data-octree-canvas]');
-  const readout = document.querySelector('[data-octree-readout]');
+  const readouts = document.querySelectorAll('[data-octree-readout]');
   const posterEl = document.querySelector('[data-octree-poster]');
 
   function webglAvailable() {
@@ -129,10 +129,12 @@ const poster = withBase('/poster-octree.svg');
   }
 
   if (canvas instanceof HTMLCanvasElement && webglAvailable()) {
-    initOctree({ canvas, readout, posterEl });
+    initOctree({ canvas, posterEl });
   } else {
     if (canvas) canvas.hidden = true;
     if (posterEl) posterEl.hidden = false;
-    if (readout) readout.textContent = 'SPARSE VOXEL OCTREE · STATIC RENDER';
+    readouts.forEach((el) => {
+      el.textContent = 'SPARSE VOXEL OCTREE · STATIC RENDER';
+    });
   }
 </script>

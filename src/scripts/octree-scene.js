@@ -1,28 +1,25 @@
 /**
  * The hero object: a solid mass that takes itself apart.
  *
- * v3 — dark instrument. Light hairline lattice on near-black, one amber
- * accent that behaves like hot metal:
+ * v4 — formal light instrument. Ink hairline lattice on cool paper, one
+ * copper accent reserved for highlights:
  *
  *  - load: the solid subdivides into the sparse lattice (real octree,
- *    real node counts)
- *  - shipped: an A* boid flies the lattice — cells glow amber as it
- *    passes, the goal cell burns until the boid hits it, the planned
- *    path is drawn dim and filled in hot behind the agent
+ *    real node counts in the readout)
+ *  - shipped: an A* boid flies the lattice — nearby cells tint copper,
+ *    the goal cell is marked until the boid hits it, the planned path is
+ *    drawn dim and filled in behind the agent, a short trail follows
  *  - projects: the lattice contracts to a dense cluster
  *  - about: fades to near-nothing
  *  - contact: reassembles into the solid it started as
  *
- * Pointer: parallax toward the cursor, plus a feathered ring lens — cells
- * near the cursor glow amber while the very centre goes dark, like a hand
- * passing over an instrument panel.
+ * Pointer: gentle parallax, and in the hero a feathered lens that fades
+ * the lattice to reveal the solid object it encapsulates.
  *
- * Particles: ambient dust drifting behind everything, and glowing node
- * points at leaf-cell centres that light with the agent and the lens.
+ * Every taste constant lives in TUNING below — adjust there, nowhere else.
  */
 
 import {
-  AdditiveBlending,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
@@ -57,44 +54,79 @@ import {
   MAX_LEVEL,
 } from '../lib/octree-build.js';
 
-const LINE = new Color('#d5d9de');
-const AMBER = new Color('#f0630f');
-const SOLID = new Color('#1a1d21');
+/* ------------------------------------------------------------------ */
+/* TUNING — every visual constant in one place                         */
+/* ------------------------------------------------------------------ */
+const TUNING = {
+  ink: '#101317', // lattice lines
+  copper: '#b23205', // the accent — boid, goal, path, cell tint
+  solid: '#f2f3f4', // the pale mass
+
+  lens: {
+    radiusPx: 150, // feathered reveal circle
+    latticeFade: 0.12, // lattice alpha multiplier at the centre
+    solidShow: 0.92, // solid alpha inside the circle
+  },
+
+  agent: {
+    speed: 1.35, // world units / s
+    tintRadius: 0.26, // cells within this range tint copper
+    tintAlphaLift: 0.3, // max extra line alpha near the boid
+    haloScale: 2.0, // × leaf size
+    haloOpacity: 0.25,
+    trailCount: 16,
+    trailLife: 1.1, // seconds
+    trailOpacity: 0.3,
+    goalFill: 0.15,
+    goalPulseMax: 0.8,
+  },
+
+  pathDimOpacity: 0.18,
+  pathHotOpacity: 0.6,
+
+  parallax: { yaw: 0.11, pitch: 0.07 },
+
+  load: {
+    delay: 0.35,
+    levelStep: 0.42,
+    levelDur: 0.62,
+    solidFadeStart: 1.15,
+    solidFadeEnd: 2.35,
+  },
+};
+
+const INK = new Color(TUNING.ink);
+const COPPER = new Color(TUNING.copper);
+const SOLID = new Color(TUNING.solid);
 
 const EASE_OUT = (t) => 1 - Math.pow(1 - t, 3);
 
-/* Per-section object states. `levels` are opacity multipliers L0..L4. */
+/* Per-section object states. `levels` are opacity multipliers L0..L4.
+ *
+ * Composition rule: the object gets three deliberate moments — hero
+ * (subdivide), statement (the A* boid crosses it), contact (reassemble).
+ * Chapters carrying their own media (shipped, projects, jam, about) park
+ * it off the right edge, so it can never overlap a page asset.
+ *
+ * `sx` is the object's centre as a fraction of viewport width (0 = left
+ * edge, 1 = right edge) and is converted to world units against the live
+ * aspect ratio each frame — so the composition holds at any window shape,
+ * which a fixed world x does not. `y` stays in world units: the vertical
+ * field of view is constant, so vertical framing never drifts. */
 const STATES = {
-  hero: { levels: [0.2, 0.22, 0.26, 0.38, 0.72], pts: 0.55, dust: 1, solid: 0, contract: 0, rot: 0.055, x: 0.62, y: 0.05, scale: 1, traverse: false, lens: 1 },
-  shipped: { levels: [0.07, 0.09, 0.13, 0.24, 0.5], pts: 0.85, dust: 0.8, solid: 0, contract: 0, rot: 0.13, x: 1.15, y: 0.1, scale: 0.62, traverse: true, lens: 0 },
-  projects: { levels: [0.04, 0.06, 0.1, 0.22, 0.46], pts: 0.5, dust: 0.8, solid: 0, contract: 0.62, rot: 0.1, x: 1.3, y: 0.35, scale: 0.55, traverse: false, lens: 0 },
-  about: { levels: [0.02, 0.02, 0.03, 0.05, 0.09], pts: 0.06, dust: 0.35, solid: 0, contract: 0, rot: 0.015, x: 1.15, y: 0.1, scale: 0.62, traverse: false, lens: 0 },
-  contact: { levels: [0.03, 0.04, 0.05, 0.07, 0.12], pts: 0.12, dust: 0.6, solid: 0.95, contract: 0, rot: 0.04, x: 1.05, y: 0.05, scale: 0.72, traverse: false, lens: 1 },
+  hero: { levels: [0.3, 0.3, 0.34, 0.46, 0.8], solid: 0, contract: 0, rot: 0.055, sx: 0.6, y: 0.05, scale: 1, traverse: false, lens: 1 },
+  statement: { levels: [0.16, 0.18, 0.22, 0.34, 0.66], solid: 0, contract: 0, rot: 0.09, sx: 0.78, y: 0.05, scale: 0.65, traverse: true, lens: 0 },
+  shipped: { levels: [0.02, 0.02, 0.03, 0.04, 0.07], solid: 0, contract: 0, rot: 0.05, sx: 1.15, y: 0.3, scale: 0.45, traverse: false, lens: 0 },
+  projects: { levels: [0.02, 0.02, 0.03, 0.04, 0.07], solid: 0, contract: 0.62, rot: 0.05, sx: 1.15, y: 0.3, scale: 0.45, traverse: false, lens: 0 },
+  about: { levels: [0.02, 0.02, 0.02, 0.03, 0.05], solid: 0, contract: 0, rot: 0.015, sx: 1.15, y: 0.1, scale: 0.5, traverse: false, lens: 0 },
+  contact: { levels: [0.04, 0.05, 0.06, 0.08, 0.14], solid: 0.95, contract: 0, rot: 0.04, sx: 0.84, y: 0.05, scale: 0.6, traverse: false, lens: 0 },
 };
-
-/* Load animation timing (seconds). */
-const LOAD_DELAY = 0.35;
-const LEVEL_STEP = 0.42;
-const LEVEL_DUR = 0.62;
-const SOLID_FADE_START = 1.15;
-const SOLID_FADE_END = 2.35;
 
 /* shared uniforms (one object each, referenced by every material) */
 const uLens = { value: new Vector3(-99999, -99999, 1) }; // xy px (GL), z radius px
 const uLensStrength = { value: 0 };
 const uAgent = { value: new Vector3(999, 999, 999) }; // group-local
-const uAgentGlowGlobal = { value: 0 };
-const uTime = { value: 0 };
-
-const LATTICE_FRAG_GLOW = /* glsl */ `
-  /* amber ring around the pointer with a dark core */
-  float dPx = distance(gl_FragCoord.xy, uLens.xy);
-  float r = uLens.z;
-  float ring = (1.0 - smoothstep(r * 0.55, r, dPx)) * smoothstep(r * 0.12, r * 0.42, dPx);
-  float core = 1.0 - smoothstep(r * 0.04, r * 0.26, dPx);
-  ring *= uLensStrength;
-  core *= uLensStrength;
-`;
+const uAgentAmt = { value: 0 };
 
 function lineMaterial(color) {
   return new ShaderMaterial({
@@ -105,12 +137,12 @@ function lineMaterial(color) {
       uContract: { value: 0 },
       uOpacity: { value: 0 },
       uColor: { value: color.clone() },
-      uGlowColor: { value: AMBER.clone() },
+      uCopper: { value: COPPER.clone() },
       uAgentGlow: { value: 0 },
       uLens,
       uLensStrength,
       uAgent,
-      uAgentGlowGlobal,
+      uAgentAmt,
     },
     vertexShader: /* glsl */ `
       attribute vec3 aCenter;
@@ -119,35 +151,38 @@ function lineMaterial(color) {
       uniform float uContract;
       uniform vec3 uAgent;
       varying float vA;
-      varying float vGlow;
+      varying float vNear;
       void main() {
         float t = clamp((uProgress - aDelay * 0.55) / 0.45, 0.0, 1.0);
         float e = 1.0 - pow(1.0 - t, 3.0);
         vec3 center = mix(aCenter, aCenter * 0.22, uContract);
         vec3 pos = center + (position - aCenter) * mix(0.86, 1.0, e);
         vA = e;
-        /* proximity of this cell to the travelling agent */
-        vGlow = 1.0 - smoothstep(0.12, 0.62, distance(aCenter, uAgent));
+        vNear = 1.0 - smoothstep(${(TUNING.agent.tintRadius * 0.3).toFixed(3)}, ${TUNING.agent.tintRadius.toFixed(3)}, distance(aCenter, uAgent));
         gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }
     `,
     fragmentShader: /* glsl */ `
       precision mediump float;
       uniform vec3 uColor;
-      uniform vec3 uGlowColor;
+      uniform vec3 uCopper;
       uniform float uOpacity;
       uniform float uAgentGlow;
-      uniform float uAgentGlowGlobal;
+      uniform float uAgentAmt;
       uniform vec3 uLens;
       uniform float uLensStrength;
       varying float vA;
-      varying float vGlow;
+      varying float vNear;
       void main() {
         float a = vA * uOpacity;
-        ${LATTICE_FRAG_GLOW}
-        float agent = vGlow * uAgentGlow * uAgentGlowGlobal;
-        vec3 col = mix(uColor, uGlowColor, clamp(ring + agent, 0.0, 1.0));
-        a = a * (1.0 - 0.85 * core) + ring * 0.4 * vA + agent * 0.8 * vA;
+        /* feathered reveal lens: lattice thins near the pointer */
+        float d = distance(gl_FragCoord.xy, uLens.xy);
+        float outside = smoothstep(uLens.z * 0.35, uLens.z, d);
+        a *= mix(1.0 - (1.0 - ${TUNING.lens.latticeFade}) * uLensStrength, 1.0, outside);
+        /* copper tint near the travelling agent — a highlight, not a light */
+        float near = vNear * uAgentGlow * uAgentAmt;
+        vec3 col = mix(uColor, uCopper, clamp(near, 0.0, 1.0));
+        a += near * ${TUNING.agent.tintAlphaLift} * vA;
         if (a < 0.004) discard;
         gl_FragColor = vec4(col, a);
       }
@@ -190,158 +225,24 @@ function buildLevelLines(levelData) {
   geo.setAttribute('position', new BufferAttribute(positions, 3));
   geo.setAttribute('aCenter', new BufferAttribute(centers, 3));
   geo.setAttribute('aDelay', new BufferAttribute(delays, 1));
-  return new LineSegments(geo, lineMaterial(LINE));
+  return new LineSegments(geo, lineMaterial(INK));
 }
 
-/** glowing node points at leaf-cell centres */
-function buildNodePoints(leaf) {
-  const n = leaf.cells.length;
-  const positions = new Float32Array(n * 3);
-  const seeds = new Float32Array(n);
-  leaf.cells.forEach((c, i) => {
-    positions[i * 3] = c.x;
-    positions[i * 3 + 1] = c.y;
-    positions[i * 3 + 2] = c.z;
-    seeds[i] = Math.abs(Math.sin(i * 41.7)) % 1;
-  });
-  const geo = new BufferGeometry();
-  geo.setAttribute('position', new BufferAttribute(positions, 3));
-  geo.setAttribute('aSeed', new BufferAttribute(seeds, 1));
-
-  const mat = new ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: AdditiveBlending,
-    uniforms: {
-      uOpacity: { value: 0 },
-      uContract: { value: 0 },
-      uColor: { value: AMBER.clone() },
-      uBase: { value: LINE.clone() },
-      uLens,
-      uLensStrength,
-      uAgent,
-      uAgentGlowGlobal,
-      uTime,
-    },
-    vertexShader: /* glsl */ `
-      attribute float aSeed;
-      uniform float uContract;
-      uniform vec3 uAgent;
-      uniform float uTime;
-      varying float vGlow;
-      varying float vTwinkle;
-      void main() {
-        vec3 pos = mix(position, position * 0.22, uContract);
-        vGlow = 1.0 - smoothstep(0.1, 0.55, distance(position, uAgent));
-        vTwinkle = 0.6 + 0.4 * sin(uTime * (0.6 + aSeed * 1.4) + aSeed * 40.0);
-        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (2.2 + vGlow * 6.0) * (300.0 / -mv.z);
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      precision mediump float;
-      uniform float uOpacity;
-      uniform vec3 uColor;
-      uniform vec3 uBase;
-      uniform vec3 uLens;
-      uniform float uLensStrength;
-      uniform float uAgentGlowGlobal;
-      varying float vGlow;
-      varying float vTwinkle;
-      void main() {
-        vec2 uv = gl_PointCoord - 0.5;
-        float m = 1.0 - smoothstep(0.15, 0.5, length(uv));
-        ${LATTICE_FRAG_GLOW}
-        float agent = vGlow * uAgentGlowGlobal;
-        float glow = clamp(ring + agent, 0.0, 1.0);
-        vec3 col = mix(uBase, uColor, clamp(glow + 0.35, 0.0, 1.0));
-        float a = m * (uOpacity * 0.4 * vTwinkle * (1.0 - 0.9 * core) + glow * 0.85);
-        if (a < 0.004) discard;
-        gl_FragColor = vec4(col, a);
-      }
-    `,
-  });
-  return new Points(geo, mat);
-}
-
-/** ambient dust drifting behind the object */
-function buildDust() {
-  const N = 320;
-  const positions = new Float32Array(N * 3);
-  const seeds = new Float32Array(N * 2);
-  for (let i = 0; i < N; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * 13;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 8;
-    positions[i * 3 + 2] = -1.5 - Math.random() * 4;
-    seeds[i * 2] = Math.random();
-    seeds[i * 2 + 1] = Math.random();
-  }
-  const geo = new BufferGeometry();
-  geo.setAttribute('position', new BufferAttribute(positions, 3));
-  geo.setAttribute('aSeed', new BufferAttribute(seeds, 2));
-
-  const mat = new ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: AdditiveBlending,
-    uniforms: {
-      uOpacity: { value: 0 },
-      uTime,
-      uAmber: { value: AMBER.clone() },
-      uGrey: { value: new Color('#6b7178') },
-    },
-    vertexShader: /* glsl */ `
-      attribute vec2 aSeed;
-      uniform float uTime;
-      varying float vTint;
-      varying float vFade;
-      void main() {
-        vTint = step(0.82, aSeed.x); /* ~18% of motes run amber */
-        vec3 pos = position;
-        pos.y += sin(uTime * (0.05 + aSeed.y * 0.08) + aSeed.x * 40.0) * 0.6;
-        pos.x += cos(uTime * (0.03 + aSeed.x * 0.05) + aSeed.y * 40.0) * 0.5;
-        vFade = 0.35 + 0.65 * aSeed.y;
-        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (1.4 + aSeed.x * 2.2) * (300.0 / -mv.z);
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      precision mediump float;
-      uniform float uOpacity;
-      uniform vec3 uAmber;
-      uniform vec3 uGrey;
-      varying float vTint;
-      varying float vFade;
-      void main() {
-        vec2 uv = gl_PointCoord - 0.5;
-        float m = 1.0 - smoothstep(0.1, 0.5, length(uv));
-        vec3 col = mix(uGrey, uAmber, vTint);
-        float a = m * uOpacity * 0.28 * vFade;
-        if (a < 0.004) discard;
-        gl_FragColor = vec4(col, a);
-      }
-    `,
-  });
-  return new Points(geo, mat);
-}
-
-/** soft radial glow texture for the boid halo (generated, no asset) */
+/** soft radial texture for the boid halo (generated, no asset) */
 function makeGlowTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.4)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 64, 64);
   return new CanvasTexture(c);
 }
 
-export function initOctree({ canvas, readout, posterEl }) {
+export function initOctree({ canvas, posterEl }) {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const desktop = window.matchMedia('(min-width: 64rem)');
   const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -368,13 +269,10 @@ export function initOctree({ canvas, readout, posterEl }) {
   const camera = new PerspectiveCamera(30, 1, 0.1, 30);
   camera.position.set(0, 0.1, 6.2);
 
-  scene.add(new HemisphereLight(0x3d434b, 0x0a0b0d, 1.1));
-  const keyLight = new DirectionalLight(0xf2f3f4, 0.65);
+  scene.add(new HemisphereLight(0xffffff, 0xd8dadd, 1.05));
+  const keyLight = new DirectionalLight(0xffffff, 0.9);
   keyLight.position.set(2.5, 3.2, 2.2);
   scene.add(keyLight);
-  const rim = new DirectionalLight(0xf0630f, 0.22);
-  rim.position.set(-3, -1, -2);
-  scene.add(rim);
 
   const group = new Group();
   const BASE_TILT_X = 0.32;
@@ -395,13 +293,31 @@ export function initOctree({ canvas, readout, posterEl }) {
     transparent: true,
     opacity: 1,
   });
+  /* the reveal lens shows the solid inside the feathered circle even when
+     its base opacity is 0 — injected into the stock Lambert shader */
+  solidMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uLens = uLens;
+    shader.uniforms.uLensStrength = uLensStrength;
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform vec3 uLens;\nuniform float uLensStrength;'
+      )
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+        float dLens = distance(gl_FragCoord.xy, uLens.xy);
+        float mLens = (1.0 - smoothstep(uLens.z * 0.35, uLens.z, dLens)) * uLensStrength;
+        gl_FragColor.a = max(gl_FragColor.a, mLens * ${TUNING.lens.solidShow});`
+      );
+  };
   const solid = new Mesh(solidGeo, solidMat);
   group.add(solid);
 
   const edgeMat = new LineBasicMaterial({
-    color: LINE,
+    color: INK,
     transparent: true,
-    opacity: 0.14,
+    opacity: 0.16,
   });
   const edges = new LineSegments(new EdgesGeometry(solidGeo, 12), edgeMat);
   group.add(edges);
@@ -411,94 +327,122 @@ export function initOctree({ canvas, readout, posterEl }) {
     group.add(lines);
     return lines;
   });
-  /* cells glow near the agent on the two deepest levels */
+  /* cells tint near the agent on the two deepest levels */
   levelLines[MAX_LEVEL].material.uniforms.uAgentGlow.value = 1;
   levelLines[MAX_LEVEL - 1].material.uniforms.uAgentGlow.value = 0.45;
 
-  const leaf = levels[levels.length - 1];
-  const nodePoints = buildNodePoints(leaf);
-  group.add(nodePoints);
-
-  const dust = buildDust();
-  scene.add(dust);
-
   /* --- A* agent: a boid flying the lattice --- */
+  const leaf = levels[levels.length - 1];
   const { neighbours } = buildLeafGraph(leaf);
   const leafSize = leaf.half * 2 * 0.92;
 
   const boid = new Group();
   const cone = new Mesh(
     new ConeGeometry(leafSize * 0.3, leafSize * 0.95, 6),
-    new MeshBasicMaterial({ color: AMBER, transparent: true, opacity: 0 })
+    new MeshBasicMaterial({ color: COPPER, transparent: true, opacity: 0 })
   );
   boid.add(cone);
   const halo = new Sprite(
     new SpriteMaterial({
       map: makeGlowTexture(),
-      color: AMBER,
+      color: COPPER,
       transparent: true,
       opacity: 0,
-      blending: AdditiveBlending,
       depthWrite: false,
     })
   );
-  halo.scale.setScalar(leafSize * 5);
+  halo.scale.setScalar(leafSize * TUNING.agent.haloScale);
   boid.add(halo);
   group.add(boid);
 
-  /* the goal: an amber cell burning until the boid hits it */
+  /* the goal: a copper-marked cell, held until the boid hits it */
   const goalGeo = new BoxGeometry(leafSize, leafSize, leafSize);
   const goal = new Group();
   const goalFill = new Mesh(
     goalGeo,
     new MeshBasicMaterial({
-      color: AMBER,
+      color: COPPER,
       transparent: true,
-      opacity: 0.16,
+      opacity: TUNING.agent.goalFill,
       depthWrite: false,
-      blending: AdditiveBlending,
     })
   );
   const goalEdges = new LineSegments(
     new EdgesGeometry(goalGeo),
-    new LineBasicMaterial({ color: AMBER, transparent: true, opacity: 0.9 })
+    new LineBasicMaterial({ color: COPPER, transparent: true, opacity: 0.8 })
   );
   goal.add(goalFill);
   goal.add(goalEdges);
   goal.visible = false;
   group.add(goal);
 
-  /* planned path: dim line ahead, hot line filling in behind the agent */
+  /* planned path: dim line ahead, filled in behind the agent */
   const PATH_MAX = 1024;
-  function pathLineOf(opacityMax, blending) {
+  function makePathLine(opacityMax) {
     const geo = new BufferGeometry();
     geo.setAttribute('position', new BufferAttribute(new Float32Array(PATH_MAX * 3), 3));
     geo.setDrawRange(0, 0);
     const line = new Line(
       geo,
-      new LineBasicMaterial({
-        color: AMBER,
-        transparent: true,
-        opacity: 0,
-        depthTest: false,
-        blending,
-      })
+      new LineBasicMaterial({ color: COPPER, transparent: true, opacity: 0, depthTest: false })
     );
     line.renderOrder = 3;
     line.userData.opacityMax = opacityMax;
     group.add(line);
     return line;
   }
-  const pathDim = pathLineOf(0.22, undefined);
-  const pathHot = pathLineOf(0.85, AdditiveBlending);
+  const pathDim = makePathLine(TUNING.pathDimOpacity);
+  const pathHot = makePathLine(TUNING.pathHotOpacity);
 
-  let path = null; // cell indices
-  let smooth = null; // [{x,y,z}] smoothed points
-  let segLen = null; // cumulative lengths
-  let travel = 0; // distance travelled along smooth path
+  /* short fading trail behind the boid — the sense of flow */
+  const TRAIL_N = TUNING.agent.trailCount;
+  const trailGeo = new BufferGeometry();
+  trailGeo.setAttribute('position', new BufferAttribute(new Float32Array(TRAIL_N * 3), 3));
+  trailGeo.setAttribute('aAge', new BufferAttribute(new Float32Array(TRAIL_N).fill(1), 1));
+  const trailMat = new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      uColor: { value: COPPER.clone() },
+      uOpacity: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      attribute float aAge;
+      varying float vAge;
+      void main() {
+        vAge = aAge;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = (4.5 * (1.0 - aAge) + 1.5) * (300.0 / -mv.z) * 0.02;
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      precision mediump float;
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      varying float vAge;
+      void main() {
+        vec2 uv = gl_PointCoord - 0.5;
+        float m = 1.0 - smoothstep(0.2, 0.5, length(uv));
+        float a = m * uOpacity * (1.0 - vAge) * ${TUNING.agent.trailOpacity};
+        if (a < 0.004) discard;
+        gl_FragColor = vec4(uColor, a);
+      }
+    `,
+  });
+  const trail = new Points(trailGeo, trailMat);
+  trail.renderOrder = 4;
+  group.add(trail);
+  const trailAges = new Float32Array(TRAIL_N).fill(1);
+  let trailHead = 0;
+  let trailTimer = 0;
+
+  let path = null;
+  let smooth = null;
+  let segLen = null;
+  let travel = 0;
   let totalLen = 0;
   let cursorCell = Math.floor(leaf.cells.length * 0.31);
-  const AGENT_SPEED = 1.35; // world units / s
   const boidDir = new Vector3(0, 1, 0);
   const UP = new Vector3(0, 1, 0);
 
@@ -541,8 +485,7 @@ export function initOctree({ canvas, readout, posterEl }) {
 
   function moveBoid(dt) {
     if (!smooth) return;
-    travel = Math.min(travel + AGENT_SPEED * dt, totalLen);
-    // find current segment
+    travel = Math.min(travel + TUNING.agent.speed * dt, totalLen);
     let i = 1;
     while (i < segLen.length - 1 && segLen[i] < travel) i++;
     const a = smooth[i - 1];
@@ -558,21 +501,32 @@ export function initOctree({ canvas, readout, posterEl }) {
     cone.quaternion.setFromUnitVectors(UP, boidDir);
     uAgent.value.copy(boid.position);
     writeLine(pathHot, smooth, i + 1);
+
+    /* drop a trail point on a fixed cadence */
+    trailTimer += dt;
+    if (trailTimer > TUNING.agent.trailLife / TRAIL_N) {
+      trailTimer = 0;
+      const attr = trailGeo.getAttribute('position');
+      attr.setXYZ(trailHead, boid.position.x, boid.position.y, boid.position.z);
+      attr.needsUpdate = true;
+      trailAges[trailHead] = 0;
+      trailHead = (trailHead + 1) % TRAIL_N;
+    }
+
     if (travel >= totalLen) nextPath(); // hit it — new goal
   }
 
   /* --- state machine --- */
   const current = {
     levels: [0, 0, 0, 0, 0],
-    pts: 0,
-    dust: 0,
     solid: 1,
     contract: 0,
     rot: STATES.hero.rot,
-    x: STATES.hero.x,
+    x: 0, // snapped to the hero position on the first frame, once sized
     y: STATES.hero.y,
     scale: 1,
   };
+  let placed = false;
   let target = STATES.hero;
   let loadT = reducedMotion ? Infinity : 0;
   let spin = 0;
@@ -599,7 +553,7 @@ export function initOctree({ canvas, readout, posterEl }) {
   if (desktop.matches) observeAll();
   desktop.addEventListener('change', (e) => (e.matches ? observeAll() : unobserveAll()));
 
-  /* --- pointer: parallax + lens --- */
+  /* --- pointer: parallax + reveal lens --- */
   const parallax = { x: 0, y: 0, tx: 0, ty: 0 };
   if (canHover && !reducedMotion) {
     window.addEventListener(
@@ -607,13 +561,13 @@ export function initOctree({ canvas, readout, posterEl }) {
       (e) => {
         const nx = (e.clientX / window.innerWidth) * 2 - 1;
         const ny = (e.clientY / window.innerHeight) * 2 - 1;
-        parallax.tx = nx * 0.11;
-        parallax.ty = ny * 0.07;
+        parallax.tx = nx * TUNING.parallax.yaw;
+        parallax.ty = ny * TUNING.parallax.pitch;
         const rect = canvas.getBoundingClientRect();
         uLens.value.set(
           (e.clientX - rect.left) * dpr,
           (rect.height - (e.clientY - rect.top)) * dpr,
-          250 * dpr
+          TUNING.lens.radiusPx * dpr
         );
       },
       { passive: true }
@@ -623,13 +577,13 @@ export function initOctree({ canvas, readout, posterEl }) {
     });
   }
 
-  /* --- readout --- */
+  /* --- readouts (hero + statement both carry one) --- */
+  const readouts = [...document.querySelectorAll('[data-octree-readout]')];
   let lastReadout = '';
   function setReadout(text) {
-    if (readout && text !== lastReadout) {
-      readout.textContent = text;
-      lastReadout = text;
-    }
+    if (text === lastReadout) return;
+    lastReadout = text;
+    for (const el of readouts) el.textContent = text;
   }
 
   const cumulative = [];
@@ -639,6 +593,9 @@ export function initOctree({ canvas, readout, posterEl }) {
   }, 0);
 
   /* --- sizing --- */
+  /* half-extents of the view at the object's depth, so screen-fraction
+     positions in STATES can be converted to world units */
+  let viewHalfW = 3;
   function resize() {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
@@ -647,6 +604,8 @@ export function initOctree({ canvas, readout, posterEl }) {
     camera.aspect = w / h;
     camera.fov = w < 700 ? 38 : 30;
     camera.updateProjectionMatrix();
+    const halfH = Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
+    viewHalfW = halfH * camera.aspect;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -679,25 +638,27 @@ export function initOctree({ canvas, readout, posterEl }) {
     if (!running) return;
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
-    uTime.value = now / 1000;
 
     if (loadT !== Infinity) {
       loadT += dt;
-      const t = loadT - LOAD_DELAY;
+      const t = loadT - TUNING.load.delay;
       let shownLevel = 0;
       let nodes = 1;
       levelLines.forEach((lines, i) => {
-        const p = Math.max(0, Math.min(1, (t - i * LEVEL_STEP) / LEVEL_DUR));
+        const p = Math.max(0, Math.min(1, (t - i * TUNING.load.levelStep) / TUNING.load.levelDur));
         lines.material.uniforms.uProgress.value = EASE_OUT(p);
         if (p > 0.05) {
           shownLevel = i;
           nodes = cumulative[i];
         }
       });
-      const sf = Math.max(0, Math.min(1, (t - SOLID_FADE_START) / (SOLID_FADE_END - SOLID_FADE_START)));
+      const sf = Math.max(
+        0,
+        Math.min(1, (t - TUNING.load.solidFadeStart) / (TUNING.load.solidFadeEnd - TUNING.load.solidFadeStart))
+      );
       current.solid = 1 - sf;
       setReadout(`LEVEL 0${shownLevel} / 0${MAX_LEVEL} · ${nodes} NODES`);
-      if (t > MAX_LEVEL * LEVEL_STEP + LEVEL_DUR + 0.2) {
+      if (t > MAX_LEVEL * TUNING.load.levelStep + TUNING.load.levelDur + 0.2) {
         loadT = Infinity;
       }
     } else {
@@ -712,16 +673,15 @@ export function initOctree({ canvas, readout, posterEl }) {
       levelLines[i].material.uniforms.uOpacity.value = current.levels[i];
       levelLines[i].material.uniforms.uContract.value = current.contract;
     }
-    current.pts += ((loadDone ? target.pts : 0) - current.pts) * k;
-    current.dust += (target.dust - current.dust) * k;
-    nodePoints.material.uniforms.uOpacity.value = current.pts;
-    nodePoints.material.uniforms.uContract.value = current.contract;
-    dust.material.uniforms.uOpacity.value = current.dust;
-
     if (loadDone) current.solid += (target.solid - current.solid) * k;
     current.contract += ((loadDone ? target.contract : 0) - current.contract) * k;
     current.rot += (target.rot - current.rot) * k;
-    current.x += ((desktop.matches ? target.x : 0) - current.x) * k;
+    const targetX = desktop.matches ? (target.sx * 2 - 1) * viewHalfW : 0;
+    if (!placed) {
+      placed = true;
+      current.x = targetX; // no drift-in on load
+    }
+    current.x += (targetX - current.x) * k;
     current.y += (target.y - current.y) * k;
     current.scale += (target.scale - current.scale) * k;
 
@@ -730,9 +690,9 @@ export function initOctree({ canvas, readout, posterEl }) {
 
     solidMat.opacity = current.solid;
     solidMat.depthWrite = current.solid > 0.5;
-    solid.visible = current.solid > 0.01;
-    edgeMat.opacity = current.solid * 0.14;
-    edges.visible = solid.visible;
+    solid.visible = current.solid > 0.01 || uLensStrength.value > 0.02;
+    edgeMat.opacity = current.solid * 0.16;
+    edges.visible = current.solid > 0.01;
 
     group.position.set(current.x, current.y, 0);
     group.scale.setScalar(current.scale);
@@ -742,7 +702,6 @@ export function initOctree({ canvas, readout, posterEl }) {
       parallax.y += (parallax.ty - parallax.y) * (1 - Math.exp(-dt * 2.6));
       group.rotation.y = spin + parallax.x;
       group.rotation.x = BASE_TILT_X + parallax.y * 0.6;
-      dust.rotation.y = parallax.x * 0.25;
     }
 
     /* A* traversal — only while the shipped section drives the state */
@@ -751,7 +710,10 @@ export function initOctree({ canvas, readout, posterEl }) {
       if (!path) nextPath();
       if (path) {
         moveBoid(dt);
-        const remaining = Math.max(0, Math.round(((totalLen - travel) / Math.max(totalLen, 1e-5)) * path.length));
+        const remaining = Math.max(
+          0,
+          Math.round(((totalLen - travel) / Math.max(totalLen, 1e-5)) * path.length)
+        );
         setReadout(`A* · ${path.length} NODES · ${remaining} TO GOAL`);
       }
       agentAlpha += (1 - agentAlpha) * k;
@@ -759,18 +721,29 @@ export function initOctree({ canvas, readout, posterEl }) {
       agentAlpha += (0 - agentAlpha) * k;
       if (loadDone) setReadout(`LEVEL 0${MAX_LEVEL} / 0${MAX_LEVEL} · ${totalNodes} NODES`);
     }
-    uAgentGlowGlobal.value = agentAlpha;
-    cone.material.opacity = agentAlpha * 0.95;
-    halo.material.opacity = agentAlpha * 0.75;
+    uAgentAmt.value = agentAlpha;
+    cone.material.opacity = agentAlpha;
+    halo.material.opacity = agentAlpha * TUNING.agent.haloOpacity;
     boid.visible = agentAlpha > 0.02;
     pathDim.material.opacity = agentAlpha * pathDim.userData.opacityMax;
     pathHot.material.opacity = agentAlpha * pathHot.userData.opacityMax;
     pathDim.visible = pathHot.visible = agentAlpha > 0.02;
+    trailMat.uniforms.uOpacity.value = agentAlpha;
+    trail.visible = agentAlpha > 0.02;
+    for (let i = 0; i < TRAIL_N; i++) {
+      if (trailAges[i] < 1) {
+        trailAges[i] = Math.min(1, trailAges[i] + dt / TUNING.agent.trailLife);
+      }
+    }
+    trailGeo.getAttribute('aAge').set(trailAges);
+    trailGeo.getAttribute('aAge').needsUpdate = true;
+
     goal.visible = traversing && path !== null;
     if (goal.visible) {
-      const pulse = 1.2 + 0.15 * Math.sin(now * 0.005);
+      const pulse = 1.2 + 0.12 * Math.sin(now * 0.005);
       goal.scale.setScalar(pulse);
-      goalEdges.material.opacity = 0.65 + 0.3 * Math.sin(now * 0.005);
+      goalEdges.material.opacity =
+        TUNING.agent.goalPulseMax - 0.2 + 0.2 * Math.sin(now * 0.005);
     }
 
     renderer.render(scene, camera);
@@ -783,14 +756,19 @@ export function initOctree({ canvas, readout, posterEl }) {
       l.material.uniforms.uProgress.value = 1;
       l.material.uniforms.uOpacity.value = STATES.hero.levels[i];
     });
-    nodePoints.material.uniforms.uOpacity.value = STATES.hero.pts * 0.6;
-    dust.material.uniforms.uOpacity.value = 0.5;
     current.solid = 0;
     solidMat.opacity = 0;
     solid.visible = false;
     edges.visible = false;
     setReadout(`LEVEL 0${MAX_LEVEL} / 0${MAX_LEVEL} · ${totalNodes} NODES`);
     resize();
+    /* frame it exactly as the animated hero does */
+    group.position.set(
+      desktop.matches ? (STATES.hero.sx * 2 - 1) * viewHalfW : 0,
+      STATES.hero.y,
+      0
+    );
+    group.scale.setScalar(STATES.hero.scale);
     renderer.render(scene, camera);
   }
 

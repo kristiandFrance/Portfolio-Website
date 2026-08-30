@@ -21,11 +21,11 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pub = path.join(root, 'public');
 mkdirSync(pub, { recursive: true });
 
-/* v3 dark instrument palette — keep in sync with global.css tokens */
-const INK = '#d5d9de'; // lattice + display text (light on dark)
-const PAPER = '#0d0e10';
-const SIGNAL = '#f0630f';
-const SOFT = '#9aa1a9';
+/* light instrument palette — keep in sync with global.css tokens */
+const INK = '#101317';
+const PAPER = '#e8e9eb';
+const SIGNAL = '#b23205';
+const SOFT = '#5a6169';
 
 /* ------------------------------------------------------------- */
 /* Octree → projected line segments                              */

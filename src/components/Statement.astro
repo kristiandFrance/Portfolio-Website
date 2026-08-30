@@ -3,22 +3,25 @@ const line =
   'I’ve always enjoyed taking things apart — not just to understand how they work, but why they were built that way and how they could be improved.';
 ---
 
-<section class="section statement chapter" data-octree-state="hero" aria-label="Statement">
+<section class="section statement chapter" data-octree-state="statement" aria-label="Statement">
   <div class="chapter-count statement-count" aria-hidden="true" data-reveal>
     <span class="n">01</span><span class="d">/ 06</span>
   </div>
-  <blockquote class="split" data-parallax="0.05">
+
+  <blockquote class="split" data-parallax="0.04">
     <p class="sr-only">{line}</p>
     <p class="statement-text" data-split aria-hidden="true">{line}</p>
   </blockquote>
+
+  <p class="mono-label statement-readout" data-octree-readout aria-live="off" data-reveal style="--i: 2">
+    Sparse voxel octree
+  </p>
 </section>
 
 <style>
+  /* copy holds the left; the object and its A* agent own the right */
   .statement {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    align-items: flex-start;
   }
   .statement-count {
     position: absolute;
@@ -27,14 +30,27 @@ const line =
   }
   blockquote {
     margin: 0;
-    max-width: 56rem;
+    max-width: 44rem;
+  }
+  /* stays clear of the object's zone (centred at 78% of the viewport)
+     at every desktop aspect ratio */
+  @media (min-width: 64rem) {
+    blockquote {
+      max-width: min(44rem, 48vw);
+    }
   }
   .statement-text {
-    font-size: clamp(1.6rem, 3.6vw, 3rem);
-    font-weight: 420;
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    font-weight: 440;
     letter-spacing: -0.025em;
-    line-height: 1.18;
+    line-height: 1.2;
     max-width: none;
     text-wrap: balance;
+  }
+  .statement-readout {
+    margin-top: var(--space-4);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--rule);
+    min-width: 18rem;
   }
 </style>
