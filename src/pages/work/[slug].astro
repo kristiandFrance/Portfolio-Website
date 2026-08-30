@@ -5,51 +5,50 @@ import { SITE, withBase } from '../../lib/site';
 
 export async function getStaticPaths() {
   const entries = await getCollection('work', (e) => e.data.caseStudy);
-  return entries.map((entry) => ({
-    params: { slug: entry.id },
-    props: { entry },
-  }));
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
 }
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-
 const title = `${entry.data.title} — ${SITE.name}`;
 const media = entry.data.media ?? [];
 ---
 
 <Base title={title} description={entry.data.blurb}>
   <main id="main" class="frame case">
-    <article class="section case-article">
-      <p class="back">
-        <a class="mono-label wipe-link" href={withBase('/#work')}>← Back to the work</a>
+    <article class="case__art">
+      <p class="case__back">
+        <a class="link" href={withBase('/#work')}>&larr; Back to the work</a>
       </p>
-      <div class="section-head">
-        <p class="mono-label">{entry.data.meta}</p>
+
+      <div class="case__head">
+        <p class="label label--signal">{entry.data.meta}</p>
+        <p class="label"><span class="hatch">////////</span></p>
       </div>
-      <h1 class="case-title">{entry.data.title}</h1>
+
+      <h1 class="case__title">{entry.data.title}</h1>
+      <p class="case__lede">{entry.data.blurb}</p>
+
       <div class="prose">
         <Content />
       </div>
 
       {
         media.length > 0 && (
-          <div class="figure-grid">
+          <div class="case__figs">
             {media.map((m) => (
-              <figure class={`media-cell${m.span2 ? ' span-2' : ''}`}>
-                <img
-                  src={withBase(m.src)}
-                  alt={m.alt}
-                  width={m.width}
-                  height={m.height}
-                  loading="lazy"
-                />
+              <figure class={`cell${m.span2 ? ' span2' : ''}`}>
+                <img src={withBase(m.src)} alt={m.alt} width={m.width} height={m.height} loading="lazy" />
                 <figcaption>{m.caption}</figcaption>
               </figure>
             ))}
           </div>
         )
       }
+
+      <p class="case__foot">
+        <a class="link" href={withBase('/#work')}>&larr; Back to the work</a>
+      </p>
     </article>
   </main>
 </Base>
@@ -58,19 +57,50 @@ const media = entry.data.media ?? [];
   .case {
     min-height: 100vh;
   }
-  .case-article {
-    border-top: 0;
-    padding-top: var(--space-4);
+  .case__art {
+    padding: calc(var(--header-h) + 3rem) var(--gutter) 5rem;
+    max-width: 62rem;
+    margin-inline: auto;
   }
-  .back {
-    margin-bottom: var(--space-4);
+  .case__back {
+    margin-bottom: 2.5rem;
   }
-  .back a {
-    display: inline-block;
-    padding-block: 0.95rem;
+  .case__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.9rem;
   }
-  .case-title {
-    font-size: clamp(2.25rem, 6vw, 5rem);
-    margin-bottom: var(--space-3);
+  .case__title {
+    font-size: clamp(2rem, 5.5vw, 4rem);
+    margin: 1.25rem 0 1rem;
+  }
+  .case__lede {
+    color: var(--text-2);
+    font-size: 1.05rem;
+    max-width: 46rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .case__figs {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  @media (min-width: 56rem) {
+    .case__figs {
+      grid-template-columns: 1fr 1fr;
+    }
+    .case__figs .span2 {
+      grid-column: span 2;
+    }
+  }
+  .case__foot {
+    margin-top: 3.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
   }
 </style>

@@ -1,0 +1,27 @@
+---
+const nodes = [
+  { href: '#top', n: '00', label: 'Top' },
+  { href: '#statement', n: '01', label: 'Thesis' },
+  { href: '#work', n: '02', label: 'Shipped work' },
+  { href: '#projects', n: '03', label: 'Systems' },
+  { href: '#jam', n: '04', label: 'Game jam' },
+  { href: '#about', n: '05', label: 'About' },
+  { href: '#contact', n: '06', label: 'Contact' },
+];
+---
+
+<nav aria-label="Chapters">
+  <ul class="rail">
+    {
+      nodes.map((n, i) => (
+        <li class={i === 0 ? 'on' : undefined} data-rail={n.href.slice(1)}>
+          <a href={n.href}>
+            <i class="bar" aria-hidden="true" />
+            <span aria-hidden="true">{n.n}</span>
+            <span class="sr-only">{n.label}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

@@ -6,49 +6,47 @@ const entries = (await getCollection('work', (e) => e.data.card)).sort(
   (a, b) => a.data.order - b.data.order
 );
 
-function cardHref(entry: (typeof entries)[number]): string | null {
+function href(entry: (typeof entries)[number]): string | null {
   if (entry.data.caseStudy) return withBase(`/work/${entry.id}/`);
   if (entry.data.link) return entry.data.link.href;
   return null;
 }
 ---
 
-<section id="projects" class="section chapter" data-octree-state="projects">
-  <div class="section-head">
-    <div class="head-meta" data-reveal>
-      <p class="mono-label"><span class="lvl">L2</span> · Selected systems</p>
-      <p class="mono-label hover-hint" aria-hidden="true">
-        [hover to subdivide] · <span class="hatch">////////</span>
-      </p>
+<section id="projects" class="chapter" data-oct-state="projects">
+  <div class="oct-anchor pr__anchor" data-oct-anchor="projects" aria-hidden="true"></div>
+
+  <div class="chapter-head">
+    <div class="meta">
+      <p class="label label--signal">L2 &middot; Systems</p>
+      <p class="label">Three, deep &middot; <span class="hatch">////////</span></p>
     </div>
-    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
-      <span class="n">03</span><span class="d">/ 06</span>
-    </div>
+    <div class="counter" aria-hidden="true"><span class="n">03</span><span class="d">/ 06</span></div>
   </div>
 
-  <h2 data-reveal>Built to be taken apart.</h2>
+  <h2 data-reveal>Built to be taken apart</h2>
 
-  <div class="card-grid" data-reveal style="--i: 1">
+  <div class="cards" data-reveal style="--i: 1">
     {
-      entries.map((entry) => {
-        const href = cardHref(entry);
-        const external = href !== null && href.startsWith('http');
+      entries.map((e) => {
+        const h = href(e);
+        const ext = h !== null && h.startsWith('http');
         return (
           <article class="card">
-            <p class="mono-label">{entry.data.meta}</p>
-            <h3 class="card-title">
-              {href ? (
-                <a href={href} rel={external ? 'noopener' : undefined}>
-                  {entry.data.title}
-                  {external ? ' ↗' : ' →'}
+            <p class="label">{e.data.meta}</p>
+            <h3>
+              {h ? (
+                <a href={h} rel={ext ? 'noopener' : undefined}>
+                  {e.data.title} {ext ? '↗' : '→'}
                 </a>
               ) : (
-                entry.data.title
+                e.data.title
               )}
             </h3>
-            <p class="blurb soft">{entry.data.blurb}</p>
-            <ul class="card-detail" aria-label="Detail">
-              {entry.data.detail.map((d) => (
+            <p class="card__blurb">{e.data.blurb}</p>
+            <div class="card__rule" aria-hidden="true" />
+            <ul class="card__detail">
+              {e.data.detail.map((d) => (
                 <li>{d}</li>
               ))}
             </ul>
@@ -58,26 +56,24 @@ function cardHref(entry: (typeof entries)[number]): string | null {
     }
   </div>
 
-  <p class="also mono-label" data-reveal>
-    Also: multiplayer networking (UDP/TCP · Steam · LAN) · OpenGL, Vulkan and PS4/PS5 pipelines ·
-    Android/Lua shipped to Google Play
+  <p class="label pr__also" data-reveal style="--i: 2">
+    Also &mdash; multiplayer networking (UDP/TCP, Steam, LAN) &middot; OpenGL, Vulkan, PS4/PS5
+    pipelines &middot; Android and Lua shipped to Google Play
   </p>
 </section>
 
 <style>
-  .card-grid {
-    margin-top: var(--space-3);
+  .pr__anchor {
+    right: -22%;
+    top: 4%;
+    --aw: min(22vmin, 14rem);
   }
-  .blurb {
-    font-size: 0.9375rem;
+  .card__blurb {
+    font-size: 0.9rem;
+    color: var(--text-2);
   }
-  .also {
-    margin-top: var(--space-3);
+  .pr__also {
+    margin-top: 1.75rem;
     max-width: none;
-  }
-  @media (hover: none) {
-    .hover-hint {
-      visibility: hidden;
-    }
   }
 </style>

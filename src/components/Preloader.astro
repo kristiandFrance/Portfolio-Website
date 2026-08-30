@@ -1,0 +1,137 @@
+---
+/**
+ * The handover. A wireframe cell subdivides while the scene builds its
+ * octree; the counter is the real load progress. Gates the reveal so the
+ * first thing anyone sees is the object, fully formed.
+ */
+---
+
+<div class="pre" id="preloader">
+  <div class="pre__inner">
+    <svg class="pre__mark" viewBox="0 0 120 120" role="img" aria-label="Loading">
+      <g fill="none" stroke="currentColor" stroke-width="0.75">
+        <rect class="d0" x="10" y="10" width="100" height="100"></rect>
+        <path class="d1" d="M60 10v100M10 60h100"></path>
+        <path class="d2" d="M35 10v100M85 10v100M10 35h100M10 85h100"></path>
+        <path class="d3" d="M22.5 35v50M47.5 35v50M72.5 35v50M97.5 35v50M35 22.5h50M35 47.5h50M35 72.5h50M35 97.5h50"></path>
+      </g>
+    </svg>
+
+    <p class="label pre__name">Kristian de France</p>
+    <div class="pre__bar" aria-hidden="true"><i></i></div>
+    <p class="label pre__pct"><span data-pre-pct>0</span>% &middot; <span data-pre-msg>Building octree</span></p>
+  </div>
+</div>
+
+<style>
+  .pre {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: var(--ground);
+    display: grid;
+    place-items: center;
+    transition:
+      opacity 0.9s var(--ease),
+      visibility 0.9s var(--ease);
+  }
+  .pre.gone {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .pre__inner {
+    display: grid;
+    justify-items: center;
+    gap: 1.15rem;
+    padding: var(--gutter);
+  }
+  .pre__mark {
+    width: clamp(90px, 16vmin, 150px);
+    height: auto;
+    color: var(--rule-strong);
+  }
+  .pre__mark g > * {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: draw 1.1s var(--ease) forwards;
+  }
+  .pre__mark .d1 { animation-delay: 0.3s; }
+  .pre__mark .d2 { animation-delay: 0.55s; }
+  .pre__mark .d3 { animation-delay: 0.8s; color: var(--signal); stroke: var(--signal); opacity: 0.85; }
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .pre__name {
+    color: var(--text);
+    letter-spacing: 0.3em;
+  }
+  .pre__bar {
+    width: min(230px, 52vw);
+    height: 1px;
+    background: var(--rule-soft);
+    overflow: hidden;
+  }
+  .pre__bar i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--signal);
+    transition: width 0.4s var(--ease);
+  }
+  .pre__pct {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pre__mark g > * {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+  }
+</style>
+
+<script>
+  const pre = document.getElementById('preloader');
+  const pctEl = document.querySelector('[data-pre-pct]');
+  const msgEl = document.querySelector('[data-pre-msg]');
+  const bar = document.querySelector('.pre__bar i');
+
+  let pct = 0;
+  let handedOver = false;
+  const steps = ['Building octree', 'Subdividing', 'Linking graph', 'Ready'];
+
+  // creep forward while the scene builds; the scene's onReady finishes it
+  const creep = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 9 + 3, 92);
+    paint();
+  }, 130);
+
+  function paint() {
+    const v = Math.round(pct);
+    if (pctEl) pctEl.textContent = String(v);
+    if (bar) bar.style.width = v + '%';
+    if (msgEl) {
+      const i = Math.min(steps.length - 1, Math.floor((v / 100) * steps.length));
+      msgEl.textContent = steps[i];
+    }
+  }
+
+  function handover() {
+    if (handedOver) return;
+    handedOver = true;
+    clearInterval(creep);
+    pct = 100;
+    paint();
+    setTimeout(() => {
+      pre?.classList.add('gone');
+      document.body.classList.add('ready');
+      document.dispatchEvent(new CustomEvent('site:ready'));
+    }, 420);
+  }
+
+  document.addEventListener('octree:ready', handover, { once: true });
+  // never trap the visitor if WebGL is missing or slow
+  setTimeout(handover, 6000);
+  window.addEventListener('load', () => setTimeout(handover, 2200));
+</script>

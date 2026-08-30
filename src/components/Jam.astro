@@ -1,70 +1,67 @@
 ---
 import { SITE, withBase } from '../lib/site';
-
 const shot = withBase('/media/tangletails.webp');
 ---
 
-<section id="jam" class="section jam chapter" data-octree-state="projects">
-  <div class="section-head">
-    <div class="head-meta" data-reveal>
-      <p class="mono-label"><span class="lvl">L2</span> · 48 hours</p>
-      <p class="mono-label">KiwiJam 2026 — 1st place, main theme · <span class="hatch">////////</span></p>
+<section id="jam" class="chapter" data-oct-state="projects">
+  <div class="chapter-head">
+    <div class="meta">
+      <p class="label label--signal">L2 &middot; 48 hours</p>
+      <p class="label">KiwiJam 2026 &middot; 1st place, main theme &middot; <span class="hatch">////////</span></p>
     </div>
-    <div class="chapter-count" data-reveal style="--i: 1" aria-hidden="true">
-      <span class="n">04</span><span class="d">/ 06</span>
-    </div>
+    <div class="counter" aria-hidden="true"><span class="n">04</span><span class="d">/ 06</span></div>
   </div>
 
-  <div class="jam-grid">
+  <div class="jam__grid">
     <div>
-      <h2 class="jam-title" data-reveal>Tangle Tails</h2>
-      <p class="soft" data-reveal style="--i: 1">
-        Theme: <em>Entanglement</em>, with a countdown. Lab mice on cables, tangling themselves to
-        death unless you drag them apart — built in Godot (C#/.NET) by a team of seven against 120+
-        entrants, and it took the main theme prize. I worked across programming, music and sound
-        design. The deep-systems work above takes months; this is what the same brain does in a
-        weekend.
+      <h2 data-reveal>Tangle Tails</h2>
+      <p class="jam__lede" data-reveal style="--i: 1">
+        Theme: <em>Entanglement</em>, with a countdown. Lab mice tethered to cables tie themselves
+        into knots and die unless you drag them apart. Godot, C#/.NET, seven people, forty-eight
+        hours &mdash; first out of 120+ entries. I wrote gameplay code and the music.
       </p>
-      <p data-reveal style="--i: 2">
-        <a class="wipe-link arrow" href={SITE.itch} rel="noopener">Play it on itch ↗</a>
+      <p class="label jam__note" data-reveal style="--i: 2">
+        The systems work above takes months. This is what the same head does in a weekend.
+      </p>
+      <p data-reveal style="--i: 2" class="jam__cta">
+        <a class="link" href={SITE.itch} rel="noopener">Play it on itch &#8599;</a>
       </p>
     </div>
-    <figure class="media-cell jam-shot" data-reveal style="--i: 2" data-parallax="0.03">
+
+    <figure class="cell" data-reveal style="--i: 2">
       <img
         src={shot}
-        alt="Tangle Tails gameplay: mice tethered by long colourful cables inside a caged lab pen, with powerup slots along the bottom"
+        alt="Tangle Tails gameplay: mice tethered by long coloured cables inside a caged lab pen, powerup slots along the bottom"
         width="347"
         height="199"
         loading="lazy"
       />
-      <figcaption>48-hour build — cables mid-tangle</figcaption>
+      <figcaption>48-hour build &middot; cables mid-tangle</figcaption>
     </figure>
   </div>
 </section>
 
 <style>
-  .jam-grid {
+  .jam__grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-    align-items: start;
+    gap: 2rem;
+    align-items: center;
   }
   @media (min-width: 56rem) {
-    .jam-grid {
-      grid-template-columns: minmax(0, 1fr) 21.5rem;
-      gap: clamp(2rem, 5vw, 4.5rem);
+    .jam__grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+      gap: clamp(2rem, 6vw, 5rem);
     }
   }
-  .jam-title {
-    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  .jam__lede {
+    margin-top: 1rem;
+    color: var(--text-2);
   }
-  .jam p.soft {
-    margin-top: var(--space-2);
+  .jam__note {
+    margin-top: 1.25rem;
+    max-width: 42ch;
   }
-  .jam-grid p:last-of-type {
-    margin-top: var(--space-3);
-  }
-  .jam-shot {
-    max-width: 21.5rem;
+  .jam__cta {
+    margin-top: 1.5rem;
   }
 </style>

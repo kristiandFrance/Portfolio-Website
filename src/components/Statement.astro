@@ -3,54 +3,61 @@ const line =
   'I’ve always enjoyed taking things apart — not just to understand how they work, but why they were built that way and how they could be improved.';
 ---
 
-<section class="section statement chapter" data-octree-state="statement" aria-label="Statement">
-  <div class="chapter-count statement-count" aria-hidden="true" data-reveal>
-    <span class="n">01</span><span class="d">/ 06</span>
+<section id="statement" class="chapter statement" data-oct-state="statement" aria-label="Statement">
+  <div class="oct-anchor st__anchor" data-oct-anchor="statement" aria-hidden="true"></div>
+
+  <div class="chapter-head">
+    <div class="meta">
+      <p class="label label--signal">L0 &middot; Thesis</p>
+      <p class="label">The shape of the thinking &middot; <span class="hatch">////////</span></p>
+    </div>
+    <div class="counter" aria-hidden="true"><span class="n">01</span><span class="d">/ 06</span></div>
   </div>
 
-  <blockquote class="split" data-parallax="0.04">
+  <blockquote class="split st__quote">
     <p class="sr-only">{line}</p>
-    <p class="statement-text" data-split aria-hidden="true">{line}</p>
+    <p class="st__text" data-split aria-hidden="true">{line}</p>
   </blockquote>
 
-  <p class="mono-label statement-readout" data-octree-readout aria-live="off" data-reveal style="--i: 2">
+  <p class="label st__readout" data-oct-readout aria-live="off" data-reveal style="--i: 2">
     Sparse voxel octree
   </p>
 </section>
 
 <style>
-  /* copy holds the left; the object and its A* agent own the right */
-  .statement {
-    align-items: flex-start;
+  .st__anchor {
+    right: 2%;
+    top: 50%;
+    transform: translateY(-50%);
+    --aw: min(40vmin, 27rem);
   }
-  .statement-count {
-    position: absolute;
-    top: var(--space-4);
-    right: var(--gutter);
-  }
-  blockquote {
+  .st__quote {
     margin: 0;
-    max-width: 44rem;
+    max-width: 40rem;
   }
-  /* stays clear of the object's zone (centred at 78% of the viewport)
-     at every desktop aspect ratio */
   @media (min-width: 64rem) {
-    blockquote {
-      max-width: min(44rem, 48vw);
+    .st__quote {
+      max-width: min(40rem, 50vw);
     }
   }
-  .statement-text {
-    font-size: clamp(1.5rem, 3vw, 2.5rem);
-    font-weight: 440;
-    letter-spacing: -0.025em;
+  .st__text {
+    font-family: var(--display);
+    font-size: clamp(1.3rem, 2.9vw, 2.35rem);
     line-height: 1.2;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0.005em;
     max-width: none;
-    text-wrap: balance;
   }
-  .statement-readout {
-    margin-top: var(--space-4);
-    padding-top: var(--space-2);
+  .st__readout {
+    margin-top: 2.5rem;
+    padding-top: 0.7rem;
     border-top: 1px solid var(--rule);
-    min-width: 18rem;
+    max-width: 20rem;
+  }
+  @media (max-width: 63.99rem) {
+    .st__anchor {
+      --aw-m: 40vmin;
+    }
   }
 </style>

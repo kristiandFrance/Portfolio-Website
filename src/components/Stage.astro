@@ -1,0 +1,29 @@
+---
+import { withBase } from '../lib/site';
+const poster = withBase('/poster-octree.svg');
+---
+
+<div class="stage" aria-hidden="true">
+  <canvas class="stage__canvas" data-oct-canvas></canvas>
+  <img class="stage__poster" src={poster} alt="" width="1200" height="1200" hidden data-oct-poster />
+</div>
+
+<style>
+  .stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    /* behind page content, above the body ground */
+  }
+  .stage__canvas,
+  .stage__poster {
+    width: 100%;
+    height: 100%;
+  }
+  .stage__poster {
+    object-fit: contain;
+    padding: 14vmin;
+    opacity: 0.55;
+  }
+</style>

@@ -4,110 +4,123 @@ import { SITE, withBase } from '../lib/site';
 const poster = withBase('/poster-octree.svg');
 ---
 
-<section id="top" class="hero chapter" data-octree-state="hero" aria-label="Introduction">
-  <div class="octree-wrap" aria-hidden="true">
-    <canvas class="octree-canvas" data-octree-canvas></canvas>
-    <img
-      class="octree-poster"
-      src={poster}
-      alt=""
-      width="1200"
-      height="1200"
-      hidden
-      data-octree-poster
-    />
-    <noscript>
-      <img class="octree-poster" src={poster} alt="" width="1200" height="1200" />
-    </noscript>
+<section id="top" class="chapter hero" data-oct-state="hero" aria-label="Introduction">
+  <!-- the object lives here; CSS owns the composition -->
+  <div class="oct-anchor hero__anchor" data-oct-anchor="hero" aria-hidden="true"></div>
+
+  <div class="hero__brackets">
+    <p class="label brk">Systems, engines and the things underneath games</p>
+    <p class="label brk hero__brk-r">Auckland, New Zealand &middot; open to work</p>
   </div>
 
-  <div class="hero-content">
-    <div class="hero-copy">
-      <p class="mono-label eyebrow">Software Engineer — Auckland, NZ</p>
-      <h1>Kristian de&nbsp;France</h1>
-      <p class="sub soft">Systems, engines and the things underneath games.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="#work">See the work ↓</a>
-        <a class="wipe-link email-link" href={`mailto:${SITE.email}`}>Email me</a>
-      </div>
+  <div class="hero__body">
+    <p class="label" data-reveal>Software Engineer</p>
+    <h1 data-reveal style="--i: 1">
+      Kristian<br />de&nbsp;<span class="gold">France</span>
+    </h1>
+    <p class="hero__sub" data-reveal style="--i: 2">
+      Four years in C++ and C#. Engine systems, AI navigation and a shipped Steam title &mdash;
+      the object beside this is a real sparse voxel octree, built in your browser.
+    </p>
+    <div class="hero__cta" data-reveal style="--i: 3">
+      <a class="btn btn--primary" href="#work">
+        <span class="btn__lines" aria-hidden="true"></span>
+        <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
+        <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
+        <span class="btn__txt">Enter the work</span>
+      </a>
+      <a class="link" href={`mailto:${SITE.email}`}>Email &rarr;</a>
     </div>
-    <p class="mono-label readout" data-octree-readout aria-live="off">Sparse voxel octree</p>
   </div>
+
+  <p class="label hero__readout" data-oct-readout aria-live="off">Sparse voxel octree</p>
+
+  <noscript>
+    <img class="hero__poster" src={poster} alt="" width="1200" height="1200" />
+  </noscript>
 </section>
 
 <style>
   .hero {
-    position: relative;
-    min-height: 100svh;
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-3) var(--gutter) var(--space-3);
+    align-content: end;
   }
-
-  .octree-wrap {
+  .hero__anchor {
+    /* desktop: right of centre, vertically middle */
+    left: 52%;
+    top: 46%;
+    transform: translate(-10%, -50%);
+    --aw: min(46vmin, 34rem);
+  }
+  .hero__brackets {
     position: absolute;
-    inset: 0;
-    overflow: clip;
-    pointer-events: none;
-    /* above the body background, below every section's in-flow content */
-    z-index: -1;
-  }
-  @media (min-width: 64rem) {
-    .octree-wrap {
-      position: fixed;
-    }
-  }
-  .octree-canvas,
-  .octree-poster {
-    width: 100%;
-    height: 100%;
-  }
-  .octree-poster {
-    object-fit: contain;
-    padding: 12vmin;
-  }
-
-  .hero-content {
-    position: relative;
-    z-index: 1;
-    margin-top: auto;
+    top: calc(var(--header-h) + 1.5rem);
+    left: var(--gutter);
+    right: var(--gutter);
     display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    justify-content: space-between;
+    gap: 2rem;
   }
-  .eyebrow {
-    margin-bottom: var(--space-2);
+  .hero__brackets p {
+    max-width: 22ch;
+    margin: 0;
   }
-  .sub {
-    margin-top: var(--space-2);
-    font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  .hero__brk-r {
+    text-align: right;
   }
-  .cta-row {
-    margin-top: var(--space-3);
+  .hero__body {
+    max-width: 34rem;
+  }
+  h1 {
+    margin: 0.6rem 0 1.25rem;
+  }
+  .hero__sub {
+    color: var(--text-2);
+    font-size: 1.02rem;
+    max-width: 40ch;
+  }
+  .hero__cta {
+    margin-top: 2rem;
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 1.75rem;
     flex-wrap: wrap;
   }
-  .email-link {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding-block: 0.95rem; /* touch target ≥44px */
-  }
-  .readout {
+  .hero__readout {
+    position: absolute;
+    left: var(--gutter);
+    bottom: 1.6rem;
     border-top: 1px solid var(--rule);
-    padding-top: var(--space-2);
+    padding-top: 0.7rem;
+    min-width: 17rem;
+  }
+  .hero__poster {
+    width: 60vmin;
+    margin: 2rem auto;
+    opacity: 0.5;
   }
 
-  /* on phones the object gets the top half, copy the bottom */
+  /* phones: object above, copy below — never overlapping */
   @media (max-width: 63.99rem) {
-    .octree-wrap {
-      bottom: 38%;
+    .hero {
+      align-content: center;
     }
-    .hero-content {
-      margin-top: 52svh;
+    .hero__anchor {
+      --aw-m: min(52vmin, 17rem);
+    }
+    .hero__brackets {
+      display: none;
+    }
+    .hero__readout {
+      position: static;
+      margin-top: 2rem;
+    }
+  }
+  @media (orientation: landscape) and (max-height: 700px) {
+    .hero__anchor {
+      --aw: min(38vmin, 22rem);
+    }
+    .hero__brackets {
+      display: none;
     }
   }
 </style>
@@ -115,11 +128,10 @@ const poster = withBase('/poster-octree.svg');
 <script>
   import { initOctree } from '../scripts/octree-scene.js';
 
-  const canvas = document.querySelector('[data-octree-canvas]');
-  const readouts = document.querySelectorAll('[data-octree-readout]');
-  const posterEl = document.querySelector('[data-octree-poster]');
+  const canvas = document.querySelector('[data-oct-canvas]');
+  const posterEl = document.querySelector('[data-oct-poster]');
 
-  function webglAvailable() {
+  function webglOK() {
     try {
       const c = document.createElement('canvas');
       return !!(c.getContext('webgl2') || c.getContext('webgl'));
@@ -128,13 +140,16 @@ const poster = withBase('/poster-octree.svg');
     }
   }
 
-  if (canvas instanceof HTMLCanvasElement && webglAvailable()) {
-    initOctree({ canvas, posterEl });
+  const ready = () => document.dispatchEvent(new CustomEvent('octree:ready'));
+
+  if (canvas instanceof HTMLCanvasElement && webglOK()) {
+    initOctree({ canvas, posterEl, onReady: ready });
   } else {
     if (canvas) canvas.hidden = true;
     if (posterEl) posterEl.hidden = false;
-    readouts.forEach((el) => {
+    document.querySelectorAll('[data-oct-readout]').forEach((el) => {
       el.textContent = 'SPARSE VOXEL OCTREE · STATIC RENDER';
     });
+    ready();
   }
 </script>

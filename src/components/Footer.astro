@@ -2,38 +2,49 @@
 const year = new Date().getFullYear();
 ---
 
-<footer class="site-footer">
-  <div class="footer-inner">
-    <svg viewBox="0 0 1200 132" role="img" aria-label="Kristian de France" class="giant-wordmark">
-      <text x="0" y="106" textLength="1200" lengthAdjust="spacingAndGlyphs">Kristian de France</text>
+<footer class="ftr">
+  <div class="ftr__in">
+    <svg viewBox="0 0 1200 120" role="img" aria-label="Kristian de France" class="ftr__mark">
+      <text x="0" y="96" textLength="1200" lengthAdjust="spacingAndGlyphs">KRISTIAN DE FRANCE</text>
     </svg>
-    <p class="copyright mono-label">© {year} Kristian de France</p>
+    <div class="ftr__base">
+      <p class="label">&copy; {year} &middot; Auckland, New Zealand</p>
+      <p class="label">Built with Astro and Three.js &middot; <span class="hatch">////////</span></p>
+    </div>
   </div>
 </footer>
 
 <style>
-  .site-footer {
+  .ftr {
+    position: relative;
+    z-index: 1;
     border-top: 1px solid var(--rule);
+    background: var(--ground);
   }
-  .footer-inner {
-    max-width: var(--frame-max);
+  .ftr__in {
+    max-width: var(--frame);
     margin-inline: auto;
-    border-inline: 1px solid var(--rule);
-    padding: var(--space-4) var(--gutter) var(--space-3);
+    padding: 2.5rem var(--gutter) 1.75rem;
   }
-  .giant-wordmark {
+  .ftr__mark {
     width: 100%;
     height: auto;
   }
-  .giant-wordmark text {
-    font-family: var(--font-display);
-    font-size: 118px;
-    font-weight: 480;
-    letter-spacing: -0.03em;
-    fill: var(--ink);
+  .ftr__mark text {
+    font-family: var(--display);
+    font-size: 108px;
+    fill: none;
+    stroke: var(--rule-strong);
+    stroke-width: 0.75;
+    letter-spacing: 0.02em;
   }
-  .copyright {
-    margin-top: var(--space-2);
-    opacity: 0.5;
+  .ftr__base {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--rule-soft);
+    padding-top: 1rem;
   }
 </style>

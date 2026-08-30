@@ -21,11 +21,11 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pub = path.join(root, 'public');
 mkdirSync(pub, { recursive: true });
 
-/* light instrument palette — keep in sync with global.css tokens */
-const INK = '#101317';
-const PAPER = '#e8e9eb';
-const SIGNAL = '#b23205';
-const SOFT = '#5a6169';
+/* dark instrument palette — keep in sync with global.css tokens */
+const INK = '#c6b29e';
+const PAPER = '#0e0d0e';
+const SIGNAL = '#d9682a';
+const SOFT = '#837c75';
 
 /* ------------------------------------------------------------- */
 /* Octree → projected line segments                              */
@@ -139,10 +139,11 @@ const fontsDir = path.join(root, 'src', 'assets', 'fonts');
 async function loadVariable(file, axes) {
   const woff2 = readFileSync(path.join(fontsDir, file));
   const ttf = Buffer.from(await wawoff2.decompress(woff2));
-  return fontkit.create(ttf).getVariation(axes);
+  const f = fontkit.create(ttf);
+  return axes && Object.keys(axes).length ? f.getVariation(axes) : f;
 }
 
-const display = await loadVariable('bricolage-grotesque-latin-wght-normal.woff2', { wght: 480 });
+const display = await loadVariable('play-latin-400-normal.woff2', {});
 const mono = await loadVariable('jetbrains-mono-latin-wght-normal.woff2', { wght: 460 });
 
 function textPaths(font, text, size, ox, oy, { tracking = 0, fill = INK } = {}) {
@@ -168,7 +169,7 @@ const eyebrow = textPaths(mono, 'SOFTWARE ENGINEER — AUCKLAND, NZ', 25, 84, 20
   tracking: 0.08,
   fill: SOFT,
 });
-const name = textPaths(display, 'Kristian de France', 92, 80, 302, { tracking: -0.03 });
+const name = textPaths(display, 'KRISTIAN DE FRANCE', 74, 80, 300, { tracking: 0.02, fill: '#f2efec' });
 const sub = textPaths(mono, 'SYSTEMS, ENGINES AND THE THINGS UNDERNEATH GAMES.', 22, 84, 372, {
   tracking: 0.08,
   fill: SOFT,
@@ -176,7 +177,7 @@ const sub = textPaths(mono, 'SYSTEMS, ENGINES AND THE THINGS UNDERNEATH GAMES.',
 
 const og = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
 <rect width="1200" height="630" fill="${PAPER}"/>
-<rect x="24.5" y="24.5" width="1151" height="581" fill="none" stroke="${INK}" stroke-opacity="0.14"/>
+<rect x="24.5" y="24.5" width="1151" height="581" fill="none" stroke="${INK}" stroke-opacity="0.22"/>
 <clipPath id="sheet"><rect x="25" y="25" width="1150" height="580"/></clipPath>
 <g clip-path="url(#sheet)">${latticeGroup(942, 442, 108, 3)}</g>
 ${eyebrow.svg}
