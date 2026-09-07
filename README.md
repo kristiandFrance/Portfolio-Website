@@ -41,6 +41,12 @@ Pushes to `main` build and deploy via GitHub Actions
 (`.github/workflows/deploy.yml`) to GitHub Pages, served on the custom
 domain **kristiandfrance.com**.
 
+> **One-time setup:** repo **Settings → Pages → Source** must be set to
+> **GitHub Actions** (not "Deploy from a branch"). Until it is, the build
+> job succeeds but the `deploy` job fails with a Pages-not-enabled error
+> and the domain serves a 404. Changing the setting does not re-run past
+> workflows — push a commit or use *Re-run all jobs*.
+
 `public/CNAME` carries the domain into the build output — GitHub Pages
 reads it from `dist/`, so it must stay in `public/`. `astro.config.mjs`
 sets `site` to the custom domain and `base` to `/`.
