@@ -9,33 +9,36 @@ const links = [
 ];
 ---
 
-<section id="contact" class="chapter contact" data-oct-state="contact">
-  <div class="oct-anchor ct__anchor" data-oct-anchor="contact" aria-hidden="true"></div>
-
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L4 &middot; Contact</p>
-      <p class="label">Open to engineering roles &mdash; Auckland or remote &middot; <span class="hatch">////////</span></p>
+<section id="contact" class="scene" data-oct-state="contact">
+  <div class="scene__stage">
+    <div class="oct-anchor ct__anchor" data-oct-anchor="contact" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L4 &middot; Contact</p>
+        <p class="label">Open to engineering roles &mdash; Auckland or remote &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">06</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">06</span><span class="d">/ 06</span></div>
   </div>
 
-  <div class="ct__body">
-    <h2 data-reveal>Let’s talk</h2>
-    <p class="ct__mail" data-reveal style="--i: 1">
-      <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
-    </p>
-    <ul class="ct__links" data-reveal style="--i: 2">
-      {
-        links.map((l) => (
-          <li>
-            <a class="link" href={l.href} rel="noopener">
-              {l.label} &#8599;
-            </a>
-          </li>
-        ))
-      }
-    </ul>
+  <div class="step" data-step="0">
+    <div class="ct__body">
+      <h2>Let’s talk</h2>
+      <p class="ct__mail">
+        <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+      </p>
+      <ul class="ct__links">
+        {
+          links.map((l) => (
+            <li>
+              <a class="link" href={l.href} rel="noopener">
+                {l.label} &#8599;
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -44,7 +47,7 @@ const links = [
     right: 4%;
     top: 50%;
     transform: translateY(-50%);
-    --aw: min(36vmin, 24rem);
+    --aw: min(34vmin, 23rem);
   }
   .ct__body {
     max-width: 46rem;
@@ -87,7 +90,7 @@ const links = [
   }
   @media (max-width: 63.99rem) {
     .ct__anchor {
-      --aw-m: 38vmin;
+      --aw-m: 36vmin;
     }
   }
 </style>

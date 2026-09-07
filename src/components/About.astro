@@ -9,38 +9,42 @@ const tech = [
 ];
 ---
 
-<section id="about" class="chapter" data-oct-state="about">
-  <div class="oct-anchor ab__anchor" data-oct-anchor="about" aria-hidden="true"></div>
-
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L3 &middot; About</p>
-      <p class="label">Auckland, NZ &middot; NZ citizen &middot; <span class="hatch">////////</span></p>
+<section id="about" class="scene" data-oct-state="about">
+  <div class="scene__stage">
+    <div class="oct-anchor ab__anchor" data-oct-anchor="about" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L3 &middot; About</p>
+        <p class="label">Auckland, NZ &middot; NZ citizen &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">05</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">05</span><span class="d">/ 06</span></div>
+    <ul class="stage__ticks" aria-hidden="true"><li></li><li></li></ul>
   </div>
 
-  <div class="ab__grid">
+  <div class="step" data-step="0">
     <div class="ab__text">
-      <h2 data-reveal>The layer underneath</h2>
-      <p data-reveal style="--i: 1">
+      <h2>The layer underneath</h2>
+      <p>
         I’m a systems-oriented engineer in Auckland — four years across gameplay, systems and
         engine-adjacent code, strongest in C++ and C#. The part I care about is why a structure is
         shaped the way it is, what it costs, and where it could be better.
       </p>
-      <p data-reveal style="--i: 2">
+      <p>
         B.S.E from Media Design School (2023–2025). Mentored there in 2025 and at NZGDC 2024, and I
         keep turning up to Global Game Jam. Away from a compiler I’m learning Mandarin.
       </p>
-      <p data-reveal style="--i: 3">
+      <p>
         Looking for engineering roles — Auckland or remote — where the interesting problems are
         under the hood.
       </p>
     </div>
+  </div>
 
-    <div class="ab__tech" data-reveal style="--i: 2">
-      <p class="label ab__tech-t">Tech</p>
-      <ul class="grid-cells ab__cells">
+  <div class="step" data-step="1">
+    <div class="ab__tech">
+      <p class="label label--signal">Tech</p>
+      <ul class="grid-cells">
         {tech.map((t) => <li>{t}</li>)}
       </ul>
     </div>
@@ -49,24 +53,14 @@ const tech = [
 
 <style>
   .ab__anchor {
-    right: -24%;
-    top: 58%;
+    right: -18%;
+    top: 55%;
     --aw: min(26vmin, 16rem);
-  }
-  .ab__grid {
-    display: grid;
-    gap: 2.5rem;
-  }
-  @media (min-width: 56rem) {
-    .ab__grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
-      gap: clamp(2rem, 6vw, 5rem);
-      align-items: start;
-    }
   }
   .ab__text {
     display: grid;
     gap: 1rem;
+    max-width: 44rem;
   }
   .ab__text h2 {
     margin-bottom: 0.4rem;
@@ -74,10 +68,16 @@ const tech = [
   .ab__text p {
     color: var(--text-2);
   }
-  .ab__tech-t {
-    margin-bottom: 0.75rem;
+  .ab__tech {
+    max-width: 44rem;
   }
-  .ab__cells {
-    grid-template-columns: 1fr !important;
+  .ab__tech .label {
+    margin-bottom: 0.9rem;
+  }
+  @media (min-width: 64rem) {
+    .ab__text,
+    .ab__tech {
+      max-width: min(44rem, 56vw);
+    }
   }
 </style>

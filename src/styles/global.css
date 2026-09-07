@@ -87,7 +87,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: var(--header-h);
+  scroll-padding-top: 0;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -243,31 +243,129 @@ p {
   position: relative;
 }
 
-.chapter {
+/* ══ The scene primitive ═══════════════════════════════════════
+   A scene is one chapter of the story. Its stage is sticky and
+   pulled out of the flow with a negative margin, so the octree and
+   the chapter chrome PIN while the steps scroll beneath them. Each
+   step is one screen and one snap point — so a scene with many
+   parts never scrolls past: it locks, the object rolls, the next
+   part arrives.
+   ═════════════════════════════════════════════════════════════ */
+.scene {
   position: relative;
-  min-height: 100svh;
-  padding: calc(var(--header-h) + 2.5rem) var(--gutter) 3rem;
-  display: grid;
-  align-content: center;
   border-top: 1px solid var(--rule-soft);
-  scroll-snap-align: start;
-  /* contains the off-frame anchors so they never create page scroll */
-  overflow: clip;
 }
-/* a chapter taller than the screen is removed from the snap candidates,
-   so long content is never trapped mid-scroll (the ESQRD behaviour) */
-.chapter.too-tall {
-  scroll-snap-align: none;
-}
-.chapter:first-of-type {
+.scene:first-of-type {
   border-top: 0;
 }
 
+.scene__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  margin-bottom: -100svh; /* take no space in the flow */
+  z-index: 2;
+  pointer-events: none;   /* steps below stay clickable */
+  overflow: clip;
+}
+.scene__stage > * {
+  pointer-events: auto;
+}
+
+.step {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  padding: calc(var(--header-h) + 3.25rem) var(--gutter) 3rem;
+  display: grid;
+  align-content: center;
+  scroll-snap-align: start;
+}
+/* a flick may move between steps inside a scene, but must never
+   skip a whole scene */
+.scene > .step:first-of-type {
+  scroll-snap-stop: always;
+}
+.step.too-tall {
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+}
+
+/* only the step you are on carries full contrast — the others sit
+   back through the same focus-pull the reveals use */
+html.js .step[data-step] > * {
+  transition:
+    opacity 0.7s var(--ease),
+    filter 0.7s var(--ease),
+    transform 0.7s var(--ease);
+}
+html.js .step:not(.on) > * {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(14px);
+}
+html.js .step.on > * {
+  opacity: 1;
+  filter: blur(0);
+  transform: none;
+}
+
+/* the chapter chrome that stays put while steps pass under it */
+.stage__head {
+  position: absolute;
+  top: calc(var(--header-h) + 1.25rem);
+  left: var(--gutter);
+  right: var(--gutter);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.9rem;
+}
+.stage__head .meta {
+  display: grid;
+  gap: 0.4rem;
+}
+
+/* step ticks — which part of the scene you are on */
+.stage__ticks {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 1.75rem;
+  display: flex;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+}
+.stage__ticks li {
+  width: 1.6rem;
+  height: 1px;
+  background: var(--rule-strong);
+  transition: background-color 0.5s var(--ease);
+}
+.stage__ticks li.on {
+  background: var(--signal);
+}
+
 /* height-aware: short laptops get less padding, smaller type */
-@media (orientation: landscape) and (max-height: 800px) {
-  .chapter {
-    padding-top: calc(var(--header-h) + 1.5rem);
-    padding-bottom: 2rem;
+@media (orientation: landscape) and (max-height: 900px) {
+  .step {
+    padding-top: calc(var(--header-h) + 2.5rem);
+    padding-bottom: 1.75rem;
+  }
+  .deliverables li {
+    padding: 0.32rem 0;
+    font-size: 0.8rem;
+  }
+  .stat {
+    padding: 0.6rem 0.85rem;
+  }
+  .stat dd {
+    font-size: clamp(1.3rem, 2.1vw, 1.75rem);
+  }
+  .counter .n {
+    font-size: clamp(2rem, 4.2vw, 3.25rem);
   }
 }
 @media (orientation: landscape) and (max-height: 700px) {
@@ -279,16 +377,46 @@ p {
   }
 }
 
-/* chaptered scroll, desktop only */
+/* Chaptered scroll — the slideshow feel. Engaged only once
+   motion.js has marked any overflowing step `.too-tall` and dropped
+   it from the snap set, so long content is never trapped. */
 @media (min-width: 64rem) {
-  html.snap {
-    scroll-snap-type: y proximity;
+  html.snap.snap-ready {
+    scroll-snap-type: y mandatory;
   }
 }
 
-/* edge vignettes fuse the chapters with the 3D layer behind them */
-.chapter::before,
-.chapter::after {
+/* Phones: nothing pins. Steps become ordinary stacked blocks. */
+@media (max-width: 63.99rem) {
+  .scene__stage {
+    position: static;
+    height: auto;
+    margin-bottom: 0;
+    overflow: visible;
+  }
+  .stage__head {
+    position: static;
+    margin-bottom: 1.5rem;
+  }
+  .stage__ticks {
+    display: none;
+  }
+  .step {
+    min-height: 0;
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+    scroll-snap-align: none;
+  }
+  html.js .step:not(.on) > * {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+
+/* edge vignettes fuse the scenes with the 3D layer behind them */
+.scene__stage::before,
+.scene__stage::after {
   content: '';
   position: absolute;
   left: 0;
@@ -297,17 +425,13 @@ p {
   pointer-events: none;
   z-index: 0;
 }
-.chapter::before {
+.scene__stage::before {
   top: 0;
   background: linear-gradient(to bottom, var(--ground) 6%, transparent);
 }
-.chapter::after {
+.scene__stage::after {
   bottom: 0;
   background: linear-gradient(to top, var(--ground) 6%, transparent);
-}
-.chapter > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* chapter head: eyebrow + meta left, thin counter right */
@@ -349,6 +473,7 @@ p {
    CSS owns the composition; the object follows. */
 .oct-anchor {
   position: absolute;
+  z-index: 0;
   pointer-events: none;
   width: var(--aw, 40vmin);
   height: var(--ah, var(--aw, 40vmin));

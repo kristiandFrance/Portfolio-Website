@@ -3,25 +3,25 @@ const line =
   'I’ve always enjoyed taking things apart — not just to understand how they work, but why they were built that way and how they could be improved.';
 ---
 
-<section id="statement" class="chapter statement" data-oct-state="statement" aria-label="Statement">
-  <div class="oct-anchor st__anchor" data-oct-anchor="statement" aria-hidden="true"></div>
-
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L0 &middot; Thesis</p>
-      <p class="label">The shape of the thinking &middot; <span class="hatch">////////</span></p>
+<section id="statement" class="scene" data-oct-state="statement" aria-label="Statement">
+  <div class="scene__stage">
+    <div class="oct-anchor st__anchor" data-oct-anchor="statement" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L0 &middot; Thesis</p>
+        <p class="label">The shape of the thinking &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">01</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">01</span><span class="d">/ 06</span></div>
+    <p class="label st__readout" data-oct-readout aria-live="off">Sparse voxel octree</p>
   </div>
 
-  <blockquote class="split st__quote">
-    <p class="sr-only">{line}</p>
-    <p class="st__text" data-split aria-hidden="true">{line}</p>
-  </blockquote>
-
-  <p class="label st__readout" data-oct-readout aria-live="off" data-reveal style="--i: 2">
-    Sparse voxel octree
-  </p>
+  <div class="step" data-step="0">
+    <blockquote class="split st__quote">
+      <p class="sr-only">{line}</p>
+      <p class="st__text" data-split aria-hidden="true">{line}</p>
+    </blockquote>
+  </div>
 </section>
 
 <style>
@@ -50,14 +50,31 @@ const line =
     max-width: none;
   }
   .st__readout {
-    margin-top: 2.5rem;
+    position: absolute;
+    left: var(--gutter);
+    bottom: 1.75rem;
     padding-top: 0.7rem;
     border-top: 1px solid var(--rule);
-    max-width: 20rem;
+    min-width: 17rem;
+  }
+  /* the quote is the tallest single block on the site — pull it in on
+     short screens so the step still fits one snap frame */
+  @media (orientation: landscape) and (max-height: 900px) {
+    .st__text {
+      font-size: clamp(1.1rem, 2.05vw, 1.7rem);
+      line-height: 1.26;
+    }
+    .st__quote {
+      max-width: min(34rem, 46vw);
+    }
   }
   @media (max-width: 63.99rem) {
     .st__anchor {
       --aw-m: 40vmin;
+    }
+    .st__readout {
+      position: static;
+      margin-top: 1.25rem;
     }
   }
 </style>

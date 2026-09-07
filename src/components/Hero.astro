@@ -1,39 +1,37 @@
 ---
 import { SITE, withBase } from '../lib/site';
-
 const poster = withBase('/poster-octree.svg');
 ---
 
-<section id="top" class="chapter hero" data-oct-state="hero" aria-label="Introduction">
-  <!-- the object lives here; CSS owns the composition -->
-  <div class="oct-anchor hero__anchor" data-oct-anchor="hero" aria-hidden="true"></div>
-
-  <div class="hero__brackets">
-    <p class="label brk">Systems, engines and the things underneath games</p>
-    <p class="label brk hero__brk-r">Auckland, New Zealand &middot; open to work</p>
+<section id="top" class="scene" data-oct-state="hero" aria-label="Introduction">
+  <div class="scene__stage">
+    <div class="oct-anchor hero__anchor" data-oct-anchor="hero" aria-hidden="true"></div>
+    <div class="hero__brackets" aria-hidden="true">
+      <p class="label brk">Systems, engines and the things underneath games</p>
+      <p class="label brk hero__brk-r">Auckland, New Zealand &middot; open to work</p>
+    </div>
+    <p class="label hero__readout" data-oct-readout aria-live="off">Sparse voxel octree</p>
   </div>
 
-  <div class="hero__body">
-    <p class="label" data-reveal>Software Engineer</p>
-    <h1 data-reveal style="--i: 1">
-      Kristian<br />de&nbsp;<span class="gold">France</span>
-    </h1>
-    <p class="hero__sub" data-reveal style="--i: 2">
-      Four years in C++ and C#. Engine systems, AI navigation and a shipped Steam title &mdash;
-      the object beside this is a real sparse voxel octree, built in your browser.
-    </p>
-    <div class="hero__cta" data-reveal style="--i: 3">
-      <a class="btn btn--primary" href="#work">
-        <span class="btn__lines" aria-hidden="true"></span>
-        <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
-        <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
-        <span class="btn__txt">Enter the work</span>
-      </a>
-      <a class="link" href={`mailto:${SITE.email}`}>Email &rarr;</a>
+  <div class="step hero__step" data-step="0">
+    <div class="hero__body">
+      <p class="label">Software Engineer</p>
+      <h1>Kristian<br />de&nbsp;<span class="gold">France</span></h1>
+      <p class="hero__sub">
+        Four years in C++ and C#. Engine systems, AI navigation and a shipped Steam title &mdash;
+        the object beside this is a real sparse voxel octree, built in your browser.
+      </p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href="#work">
+          <span class="btn__lines" aria-hidden="true"></span>
+          <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
+          <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
+          <span class="btn__txt">Enter the work</span>
+        </a>
+        <a class="link" href={`mailto:${SITE.email}`}>Email &rarr;</a>
+      </div>
     </div>
   </div>
-
-  <p class="label hero__readout" data-oct-readout aria-live="off">Sparse voxel octree</p>
 
   <noscript>
     <img class="hero__poster" src={poster} alt="" width="1200" height="1200" />
@@ -41,15 +39,15 @@ const poster = withBase('/poster-octree.svg');
 </section>
 
 <style>
-  .hero {
-    align-content: end;
-  }
   .hero__anchor {
-    /* desktop: right of centre, vertically middle */
     left: 52%;
     top: 46%;
     transform: translate(-10%, -50%);
     --aw: min(46vmin, 34rem);
+  }
+  .hero__step {
+    align-content: end;
+    padding-bottom: 5.5rem;
   }
   .hero__brackets {
     position: absolute;
@@ -99,11 +97,7 @@ const poster = withBase('/poster-octree.svg');
     opacity: 0.5;
   }
 
-  /* phones: object above, copy below — never overlapping */
   @media (max-width: 63.99rem) {
-    .hero {
-      align-content: center;
-    }
     .hero__anchor {
       --aw-m: min(52vmin, 17rem);
     }
@@ -112,12 +106,16 @@ const poster = withBase('/poster-octree.svg');
     }
     .hero__readout {
       position: static;
-      margin-top: 2rem;
+      margin-top: 1.5rem;
+    }
+    .hero__step {
+      align-content: start;
+      padding-bottom: 3rem;
     }
   }
   @media (orientation: landscape) and (max-height: 700px) {
     .hero__anchor {
-      --aw: min(38vmin, 22rem);
+      --aw: min(36vmin, 21rem);
     }
     .hero__brackets {
       display: none;

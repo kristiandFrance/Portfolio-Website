@@ -102,6 +102,14 @@ const T = {
   lens: { radiusPx: 170, latticeFade: 0.14, solidShow: 0.9 },
 
   load: { delay: 0.3, step: 0.4, dur: 0.6, solidFrom: 1.05, solidTo: 2.25 },
+
+  /* the entrance: camera pulls in while the lens widens, so the object
+     holds its frame while the perspective warps around it — a dolly
+     zoom. The lattice grows slightly on top so it reads as arriving. */
+  dolly: { dur: 1.9, fromZ: 13.5, fromFov: 15, fromScale: 0.84 },
+
+  /* how far the object turns when a scene advances a step */
+  roll: 0.85,
 };
 
 const BLOOM_LAYER = 1;
@@ -120,6 +128,7 @@ const STATES = {
   statement: { levels: [0.16, 0.18, 0.22, 0.34, 0.66], solid: 0, contract: 0, spin: 0.09, traverse: true, lens: 0, plexus: 0.85 },
   shipped: { levels: [0.1, 0.12, 0.15, 0.26, 0.5], solid: 0, contract: 0, spin: 0.11, traverse: true, lens: 0, plexus: 0.6 },
   projects: { levels: [0.06, 0.08, 0.12, 0.24, 0.46], solid: 0, contract: 0.6, spin: 0.09, traverse: false, lens: 0, plexus: 0.5 },
+  jam: { levels: [0.05, 0.06, 0.09, 0.16, 0.32], solid: 0, contract: 0.35, spin: 0.07, traverse: false, lens: 0, plexus: 0.45 },
   about: { levels: [0.05, 0.06, 0.08, 0.14, 0.28], solid: 0, contract: 0, spin: 0.02, traverse: false, lens: 0, plexus: 0.4 },
   contact: { levels: [0.05, 0.06, 0.07, 0.1, 0.18], solid: 0.92, contract: 0, spin: 0.04, traverse: false, lens: 1, plexus: 0.7 },
 };
@@ -537,7 +546,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!el || w === 0 || h === 0) return;
     const r = el.getBoundingClientRect();
-    const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * T.camZ;
+    const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
     const visW = visH * camera.aspect;
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
@@ -584,13 +593,28 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const cum = [];
   levels.reduce((a, lv) => { cum.push(a + lv.cells.length); return a + lv.cells.length; }, 0);
 
+  let baseFov = T.fov;
+  /* dolly runs once, when the preloader hands over */
+  let dolly = reduced ? null : { t: 0 };
+  let introEase = reduced ? 1 : 0;
+  let rollNow = 0;
+  if (!reduced) {
+    camera.position.z = T.dolly.fromZ;
+    camera.fov = T.dolly.fromFov;
+    camera.updateProjectionMatrix();
+    document.addEventListener('site:ready', () => { if (dolly) dolly.go = true; }, { once: true });
+    // never strand the entrance if the ready event is missed
+    setTimeout(() => { if (dolly) dolly.go = true; }, 7000);
+  }
+
   /* ── size ─────────────────────────────────────────────────── */
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.fov = w < 700 ? 42 : T.fov;
+    baseFov = w < 700 ? 42 : T.fov;
+    if (!dolly) camera.fov = baseFov;
     camera.updateProjectionMatrix();
     const bw = Math.max(1, Math.floor(w * dpr * T.bloom.scale));
     const bh = Math.max(1, Math.floor(h * dpr * T.bloom.scale));
@@ -695,13 +719,19 @@ export function initOctree({ canvas, posterEl, onReady }) {
     now_.y += (want.y - now_.y) * k;
     now_.s += (want.s - now_.s) * k;
     group.position.set(now_.x, now_.y, 0);
-    group.scale.setScalar(now_.s);
+    /* the object arrives slightly small and settles into frame */
+    const introScale = T.dolly.fromScale + (1 - T.dolly.fromScale) * introEase;
+    group.scale.setScalar(now_.s * introScale);
+
+    /* the ball rolls when the scene advances a part */
+    const stepIdx = parseInt(document.documentElement.dataset.octStep || '0', 10) || 0;
+    rollNow += (stepIdx * T.roll - rollNow) * k;
 
     if (!reduced) {
       spin += cur.spin * dt;
       par.x += (par.tx - par.x) * (1 - Math.exp(-dt * 2.4));
       par.y += (par.ty - par.y) * (1 - Math.exp(-dt * 2.4));
-      group.rotation.y = spin + par.x;
+      group.rotation.y = spin + par.x + rollNow;
       group.rotation.x = TILT + par.y * 0.5;
       plexGroup.rotation.y = par.x * 0.3;
       plexGroup.rotation.x = par.y * 0.2;
@@ -793,7 +823,13 @@ export function initOctree({ canvas, posterEl, onReady }) {
     readAnchor();
     now_.x = want.x; now_.y = want.y; now_.s = want.s;
     group.position.set(now_.x, now_.y, 0);
-    group.scale.setScalar(now_.s);
+    /* the object arrives slightly small and settles into frame */
+    const introScale = T.dolly.fromScale + (1 - T.dolly.fromScale) * introEase;
+    group.scale.setScalar(now_.s * introScale);
+
+    /* the ball rolls when the scene advances a part */
+    const stepIdx = parseInt(document.documentElement.dataset.octStep || '0', 10) || 0;
+    rollNow += (stepIdx * T.roll - rollNow) * k;
     render();
   }
 

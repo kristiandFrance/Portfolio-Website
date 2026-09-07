@@ -13,28 +13,30 @@ function href(entry: (typeof entries)[number]): string | null {
 }
 ---
 
-<section id="projects" class="chapter" data-oct-state="projects">
-  <div class="oct-anchor pr__anchor" data-oct-anchor="projects" aria-hidden="true"></div>
-
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L2 &middot; Systems</p>
-      <p class="label">Three, deep &middot; <span class="hatch">////////</span></p>
+<section id="projects" class="scene" data-oct-state="projects">
+  <div class="scene__stage">
+    <div class="oct-anchor pr__anchor" data-oct-anchor="projects" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L2 &middot; Systems</p>
+        <p class="label">Three, deep &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">03</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">03</span><span class="d">/ 06</span></div>
+    <ul class="stage__ticks" aria-hidden="true">
+      {entries.map(() => <li></li>)}
+    </ul>
   </div>
 
-  <h2 data-reveal>Built to be taken apart</h2>
-
-  <div class="cards" data-reveal style="--i: 1">
-    {
-      entries.map((e) => {
-        const h = href(e);
-        const ext = h !== null && h.startsWith('http');
-        return (
-          <article class="card">
+  {
+    entries.map((e, i) => {
+      const h = href(e);
+      const ext = h !== null && h.startsWith('http');
+      return (
+        <div class="step" data-step={i}>
+          <article class="pr__item">
             <p class="label">{e.data.meta}</p>
-            <h3>
+            <h2 class="pr__title">
               {h ? (
                 <a href={h} rel={ext ? 'noopener' : undefined}>
                   {e.data.title} {ext ? '↗' : '→'}
@@ -42,38 +44,70 @@ function href(entry: (typeof entries)[number]): string | null {
               ) : (
                 e.data.title
               )}
-            </h3>
-            <p class="card__blurb">{e.data.blurb}</p>
-            <div class="card__rule" aria-hidden="true" />
-            <ul class="card__detail">
+            </h2>
+            <p class="pr__blurb">{e.data.blurb}</p>
+            <ul class="pr__detail">
               {e.data.detail.map((d) => (
                 <li>{d}</li>
               ))}
             </ul>
           </article>
-        );
-      })
-    }
-  </div>
-
-  <p class="label pr__also" data-reveal style="--i: 2">
-    Also &mdash; multiplayer networking (UDP/TCP, Steam, LAN) &middot; OpenGL, Vulkan, PS4/PS5
-    pipelines &middot; Android and Lua shipped to Google Play
-  </p>
+        </div>
+      );
+    })
+  }
 </section>
 
 <style>
   .pr__anchor {
-    right: -22%;
-    top: 4%;
-    --aw: min(22vmin, 14rem);
+    right: -16%;
+    top: 14%;
+    --aw: min(26vmin, 16rem);
   }
-  .card__blurb {
-    font-size: 0.9rem;
+  .pr__item {
+    max-width: 44rem;
+  }
+  @media (min-width: 64rem) {
+    .pr__item {
+      max-width: min(44rem, 56vw);
+    }
+  }
+  .pr__title {
+    margin: 0.7rem 0 1rem;
+  }
+  .pr__title a {
+    transition: color 0.3s var(--ease);
+  }
+  .pr__title a:hover,
+  .pr__title a:focus-visible {
+    color: var(--signal);
+  }
+  .pr__blurb {
     color: var(--text-2);
+    font-size: 1.02rem;
   }
-  .pr__also {
+  .pr__detail {
+    list-style: none;
+    padding: 0;
     margin-top: 1.75rem;
-    max-width: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--rule-soft);
+    border: 1px solid var(--rule-soft);
+  }
+  @media (min-width: 40rem) {
+    .pr__detail {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .pr__detail li {
+    background: var(--ground);
+    padding: 0.7rem 0.95rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
   }
 </style>

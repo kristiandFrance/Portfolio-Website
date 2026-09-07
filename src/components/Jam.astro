@@ -3,54 +3,65 @@ import { SITE, withBase } from '../lib/site';
 const shot = withBase('/media/tangletails.webp');
 ---
 
-<section id="jam" class="chapter" data-oct-state="projects">
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L2 &middot; 48 hours</p>
-      <p class="label">KiwiJam 2026 &middot; 1st place, main theme &middot; <span class="hatch">////////</span></p>
+<section id="jam" class="scene" data-oct-state="jam">
+  <div class="scene__stage">
+    <div class="oct-anchor jam__anchor" data-oct-anchor="jam" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L2 &middot; 48 hours</p>
+        <p class="label">KiwiJam 2026 &middot; 1st place, main theme &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">04</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">04</span><span class="d">/ 06</span></div>
   </div>
 
-  <div class="jam__grid">
-    <div>
-      <h2 data-reveal>Tangle Tails</h2>
-      <p class="jam__lede" data-reveal style="--i: 1">
-        Theme: <em>Entanglement</em>, with a countdown. Lab mice tethered to cables tie themselves
-        into knots and die unless you drag them apart. Godot, C#/.NET, seven people, forty-eight
-        hours &mdash; first out of 120+ entries. I wrote gameplay code and the music.
-      </p>
-      <p class="label jam__note" data-reveal style="--i: 2">
-        The systems work above takes months. This is what the same head does in a weekend.
-      </p>
-      <p data-reveal style="--i: 2" class="jam__cta">
-        <a class="link" href={SITE.itch} rel="noopener">Play it on itch &#8599;</a>
-      </p>
+  <div class="step" data-step="0">
+    <div class="jam__grid">
+      <div>
+        <h2>Tangle Tails</h2>
+        <p class="jam__lede">
+          Theme: <em>Entanglement</em>, with a countdown. Lab mice tethered to cables tie themselves
+          into knots and die unless you drag them apart. Godot, C#/.NET, seven people, forty-eight
+          hours &mdash; first out of 120+ entries. I wrote gameplay code and the music.
+        </p>
+        <p class="label jam__note">
+          The systems work above takes months. This is what the same head does in a weekend.
+        </p>
+        <p class="jam__cta">
+          <a class="link" href={SITE.itch} rel="noopener">Play it on itch &#8599;</a>
+        </p>
+      </div>
+      <figure class="cell">
+        <img
+          src={shot}
+          alt="Tangle Tails gameplay: mice tethered by long coloured cables inside a caged lab pen, powerup slots along the bottom"
+          width="347"
+          height="199"
+          loading="lazy"
+        />
+        <figcaption>48-hour build &middot; cables mid-tangle</figcaption>
+      </figure>
     </div>
-
-    <figure class="cell" data-reveal style="--i: 2">
-      <img
-        src={shot}
-        alt="Tangle Tails gameplay: mice tethered by long coloured cables inside a caged lab pen, powerup slots along the bottom"
-        width="347"
-        height="199"
-        loading="lazy"
-      />
-      <figcaption>48-hour build &middot; cables mid-tangle</figcaption>
-    </figure>
   </div>
 </section>
 
 <style>
+  .jam__anchor {
+    right: -18%;
+    top: 20%;
+    --aw: min(24vmin, 15rem);
+  }
   .jam__grid {
     display: grid;
     gap: 2rem;
     align-items: center;
+    max-width: 46rem;
   }
   @media (min-width: 56rem) {
     .jam__grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
-      gap: clamp(2rem, 6vw, 5rem);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
+      gap: clamp(2rem, 5vw, 3.5rem);
+      max-width: min(52rem, 62vw);
     }
   }
   .jam__lede {

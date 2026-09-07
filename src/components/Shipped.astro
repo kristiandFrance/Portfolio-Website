@@ -23,36 +23,29 @@ const clip = withBase('/media/yha-clip.mp4');
 const posterImg = withBase('/media/yha-poster.jpg');
 ---
 
-<section id="work" class="chapter shipped" data-oct-state="shipped">
-  <div class="oct-anchor sh__anchor" data-oct-anchor="shipped" aria-hidden="true"></div>
-
-  <div class="chapter-head">
-    <div class="meta">
-      <p class="label label--signal">L1 &middot; Shipped &mdash; Steam, Early Access</p>
-      <p class="label">Devious Devs &middot; 13 Dec 2025 &middot; <span class="hatch">////////</span></p>
+<section id="work" class="scene" data-oct-state="shipped">
+  <div class="scene__stage">
+    <div class="oct-anchor sh__anchor" data-oct-anchor="shipped" aria-hidden="true"></div>
+    <div class="stage__head">
+      <div class="meta">
+        <p class="label label--signal">L1 &middot; Shipped &mdash; Steam, Early Access</p>
+        <p class="label">Devious Devs &middot; 13 Dec 2025 &middot; <span class="hatch">////////</span></p>
+      </div>
+      <div class="counter" aria-hidden="true"><span class="n">02</span><span class="d">/ 06</span></div>
     </div>
-    <div class="counter" aria-hidden="true"><span class="n">02</span><span class="d">/ 06</span></div>
+    <ul class="stage__ticks" aria-hidden="true"><li></li><li></li><li></li></ul>
   </div>
 
-  <div class="sh__grid">
-    <div class="sh__left">
-      <h2 data-reveal>You’re Here Again</h2>
-      <p class="sh__lede" data-reveal style="--i: 1">
+  <div class="step" data-step="0">
+    <div class="sh__narrow">
+      <h2>You’re Here Again</h2>
+      <p class="sh__lede">
         A weirdcore movement shooter set in the liminal space between death and whatever follows.
         Wall-runs, slides, grapples and slams chain together, and damage scales with how fast
         you’re moving.
       </p>
-
-      <p class="label sh__owned-t" data-reveal style="--i: 2">What I owned</p>
-      <ol class="deliverables" data-reveal style="--i: 2">
-        {owned.map((o) => <li>{o}</li>)}
-      </ol>
-
-      <p class="sh__credit label" data-reveal style="--i: 3">
-        One of five developers &middot; credited on Steam as yodapowers_
-      </p>
-
-      <div class="sh__cta" data-reveal style="--i: 3">
+      <p class="label sh__credit">One of five developers &middot; credited on Steam as yodapowers_</p>
+      <div class="sh__cta">
         <a class="btn" href={SITE.steam} rel="noopener">
           <span class="btn__lines" aria-hidden="true"></span>
           <i class="btn__tick"></i><i class="btn__tick"></i><i class="btn__tick"></i>
@@ -62,9 +55,20 @@ const posterImg = withBase('/media/yha-poster.jpg');
         <a class="link" href={withBase('/work/youre-here-again/')}>Case study &rarr;</a>
       </div>
     </div>
+  </div>
 
-    <div class="sh__right">
-      <figure class="cell" data-reveal style="--i: 2">
+  <div class="step" data-step="1">
+    <div class="sh__narrow">
+      <p class="label label--signal">What I owned</p>
+      <ol class="deliverables">
+        {owned.map((o) => <li>{o}</li>)}
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="2">
+    <div class="sh__wide">
+      <figure class="cell">
         <video
           data-yha-clip
           src={clip}
@@ -79,8 +83,7 @@ const posterImg = withBase('/media/yha-poster.jpg');
         ></video>
         <figcaption>In-game &middot; movement kit vs the liminal space</figcaption>
       </figure>
-
-      <dl class="stats" data-reveal style="--i: 3">
+      <dl class="stats">
         {
           stats.map((s) => (
             <div class="stat">
@@ -90,7 +93,7 @@ const posterImg = withBase('/media/yha-poster.jpg');
           ))
         }
       </dl>
-      <p class="label sh__langs" data-reveal style="--i: 3">
+      <p class="label sh__langs">
         English &middot; Simplified Chinese &middot; Russian &middot; Te Reo M&#257;ori
       </p>
     </div>
@@ -98,55 +101,55 @@ const posterImg = withBase('/media/yha-poster.jpg');
 </section>
 
 <style>
-  /* object parked far right, small — this chapter carries its own media */
   .sh__anchor {
-    right: -20%;
-    top: 6%;
-    --aw: min(24vmin, 15rem);
+    right: -14%;
+    top: 12%;
+    --aw: min(28vmin, 17rem);
   }
-  .sh__grid {
+  .sh__narrow {
+    max-width: 40rem;
+  }
+  .sh__wide {
+    max-width: 46rem;
     display: grid;
-    gap: 2rem;
-  }
-  @media (min-width: 56rem) {
-    .sh__grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: clamp(2rem, 5vw, 4rem);
-      align-items: start;
-    }
+    gap: 1.25rem;
   }
   .sh__lede {
     margin-top: 0.9rem;
     color: var(--text-2);
   }
-  .sh__owned-t {
-    margin-top: 1.6rem;
-    margin-bottom: 0.5rem;
-  }
   .sh__credit {
-    margin-top: 1rem;
+    margin-top: 1.25rem;
   }
   .sh__cta {
-    margin-top: 1.4rem;
+    margin-top: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
     flex-wrap: wrap;
   }
-  .sh__right {
-    display: grid;
-    gap: 1.25rem;
-  }
   .sh__langs {
-    margin-top: -0.5rem;
+    margin-top: -0.25rem;
   }
   .cell video {
     cursor: pointer;
   }
-  @media (orientation: landscape) and (max-height: 800px) {
-    .deliverables li {
-      padding: 0.4rem 0;
-      font-size: 0.82rem;
+  @media (min-width: 64rem) {
+    .sh__narrow,
+    .sh__wide {
+      max-width: min(46rem, 56vw);
+    }
+  }
+  @media (orientation: landscape) and (max-height: 900px) {
+    .sh__wide {
+      gap: 0.85rem;
+      max-width: min(40rem, 50vw);
+    }
+    .cell figcaption {
+      padding: 0.5rem 0.8rem;
+    }
+    .sh__langs {
+      margin-top: -0.5rem;
     }
   }
 </style>
