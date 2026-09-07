@@ -2,20 +2,15 @@
 import { defineConfig } from 'astro/config';
 
 /**
- * Site/base are derived from the repository this deploys from, so the project
- * is portable between `kristiandFrance/Portfolio-Website` (project pages,
- * served under /Portfolio-Website/) and `kristiandFrance/kristiandFrance.github.io`
- * (user pages, served at the domain root). GITHUB_REPOSITORY is set by Actions.
+ * Custom domain: kristiandfrance.com (GitHub Pages serves it at the root,
+ * so `base` is '/' even though this deploys from a project repo).
+ *
+ * public/CNAME carries the domain for Pages. If you ever need to preview
+ * from the raw github.io URL, set PAGES_BASE=/Portfolio-Website/ in the
+ * build environment.
  */
-const repo = process.env.GITHUB_REPOSITORY; // e.g. "kristiandFrance/Portfolio-Website"
-let site = 'https://kristiandfrance.github.io';
-let base = '/';
-
-if (repo) {
-  const [owner, name] = repo.split('/');
-  site = `https://${owner.toLowerCase()}.github.io`;
-  base = name.toLowerCase() === `${owner.toLowerCase()}.github.io` ? '/' : `/${name}/`;
-}
+const site = process.env.PAGES_SITE ?? 'https://kristiandfrance.com';
+const base = process.env.PAGES_BASE ?? '/';
 
 export default defineConfig({
   site,

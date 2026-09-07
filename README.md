@@ -37,19 +37,37 @@ you only need it after changing the object.
 
 ## Deploying
 
-Pushes to `main` deploy via GitHub Actions (`.github/workflows/deploy.yml`)
-to GitHub Pages. One-time setup: repo **Settings → Pages → Source →
-GitHub Actions**.
+Pushes to `main` build and deploy via GitHub Actions
+(`.github/workflows/deploy.yml`) to GitHub Pages, served on the custom
+domain **kristiandfrance.com**.
 
-`astro.config.mjs` derives `site`/`base` from `GITHUB_REPOSITORY`, so the
-project works unchanged from either:
+`public/CNAME` carries the domain into the build output — GitHub Pages
+reads it from `dist/`, so it must stay in `public/`. `astro.config.mjs`
+sets `site` to the custom domain and `base` to `/`.
 
-- `kristiandFrance/Portfolio-Website` → `https://kristiandfrance.github.io/Portfolio-Website/`
-- `kristiandFrance/kristiandFrance.github.io` → `https://kristiandfrance.github.io/`
+### DNS (Cloudflare)
 
-> ⚠ GitHub rejects any file over 100 MB — keep large raw video out of the
-> repo (`Assets/` holds curated source media; the site serves compressed
-> copies from `public/media/`).
+| Type | Name | Value | Proxy |
+| --- | --- | --- | --- |
+| A | `@` | `185.199.108.153` | DNS only |
+| A | `@` | `185.199.109.153` | DNS only |
+| A | `@` | `185.199.110.153` | DNS only |
+| A | `@` | `185.199.111.153` | DNS only |
+| CNAME | `www` | `kristiandfrance.github.io` | DNS only |
+
+Grey-cloud (DNS only) until GitHub has issued the TLS certificate and
+**Enforce HTTPS** is enabled; only then consider proxying. If you do
+proxy, Cloudflare SSL/TLS mode must be **Full (strict)** — "Flexible"
+causes a redirect loop with Pages.
+
+`kdfr.nz` is a redirect domain (Cloudflare Redirect Rule → apex) and
+carries email routing.
+
+### Previewing from the raw github.io URL
+
+```bash
+PAGES_SITE=https://kristiandfrance.github.io PAGES_BASE=/Portfolio-Website/ npm run build
+```
 
 ## Where things live
 
