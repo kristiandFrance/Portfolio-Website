@@ -114,7 +114,7 @@ const T = {
   roll: 0.85,
 
   /* the dissolve between one mass and the next */
-  morph: { drawDur: 1.5, flowCount: 6000, flowDur: 2.3 },
+  morph: { drawDur: 1.6, flowCount: 3200, flowDur: 2.8, spread: 2.1 },
 };
 
 /* which mass each scene wraps. The torus is the honest one: its hole
@@ -568,33 +568,53 @@ export function initOctree({ canvas, posterEl, onReady }) {
   flowGeo.setAttribute('aFrom', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
   flowGeo.setAttribute('aTo', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
   const flowDelay = new Float32Array(FLOW_N);
-  for (let i = 0; i < FLOW_N; i++) flowDelay[i] = Math.random();
+  const flowDir = new Float32Array(FLOW_N * 3);
+  for (let i = 0; i < FLOW_N; i++) {
+    flowDelay[i] = Math.random();
+    // random point on a sphere — the detour each particle takes
+    const u = Math.random() * 2 - 1;
+    const th = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(1 - u * u);
+    const mag = 0.45 + Math.random() * 0.55;
+    flowDir[i * 3] = Math.cos(th) * r * mag;
+    flowDir[i * 3 + 1] = u * mag;
+    flowDir[i * 3 + 2] = Math.sin(th) * r * mag;
+  }
   flowGeo.setAttribute('aDelay', new BufferAttribute(flowDelay, 1));
+  flowGeo.setAttribute('aDir', new BufferAttribute(flowDir, 3));
   const flowMat = new ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    blending: AdditiveBlending,
+    /* deliberately NOT additive: thousands of overlapping points sum to
+       white almost immediately, which is what turned the dissolve into
+       a fireball. Normal blending keeps every particle legible. */
     uniforms: {
       uT: { value: 1 },
       uOpacity: { value: 0 },
-      uColor: { value: new Color('#ffd9c0') },
+      uSpread: { value: T.morph.spread },
+      uColor: { value: new Color('#e8e2dc') },
       uHot: { value: C_EMBER.clone() },
     },
     vertexShader: `
       attribute vec3 aFrom; attribute vec3 aTo; attribute float aDelay;
-      uniform float uT;
+      attribute vec3 aDir;
+      uniform float uT; uniform float uSpread;
       varying float vA;
       varying float vT;
       void main() {
-        float t = clamp((uT - aDelay * 0.5) / 0.5, 0.0, 1.0);
+        // a long stagger: the swarm leaves in waves rather than at once
+        float t = clamp((uT - aDelay * 0.62) / 0.38, 0.0, 1.0);
         float e = t * t * (3.0 - 2.0 * t);
         vec3 pos = mix(aFrom, aTo, e);
-        pos += normalize(pos + vec3(0.001)) * sin(e * 3.14159) * 0.45;
+        // every particle takes its own detour, so the cloud sweeps wide
+        // and converges — without this all three masses share a bounding
+        // box and the journey is too short to see
+        pos += aDir * sin(e * 3.14159) * uSpread;
         // fade in fast, hold bright across the journey, fade out at the end
         vA = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.82, 1.0, t));
         vT = t;
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (2.6 + 3.0 * vA) * (60.0 / -mv.z);
+        gl_PointSize = (1.5 + 1.2 * vA) * (60.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
@@ -606,13 +626,17 @@ export function initOctree({ canvas, posterEl, onReady }) {
         float m = 1.0 - smoothstep(0.1, 0.5, length(gl_PointCoord - 0.5));
         // hottest in flight, cooling as it lands on the new lattice
         vec3 col = mix(uHot, uColor, smoothstep(0.15, 0.75, vT));
-        float a = m * vA * uOpacity;
+        float a = m * vA * uOpacity * 0.85;
         if (a < 0.004) discard;
         gl_FragColor = vec4(col, a);
       }`,
   });
   const flow = new Points(flowGeo, flowMat);
-  flow.layers.enable(BLOOM_LAYER);
+  /* positions live entirely in the shader, so the geometry's bounding
+     sphere is a zero-radius point at the origin — leave culling on and
+     the whole swarm vanishes whenever the object nears a screen edge */
+  flow.frustumCulled = false;
+  flow.renderOrder = 4;
   flow.visible = false;
   group.add(flow);
   let flowT = 1;
@@ -857,7 +881,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
       const sh = shapes[i];
       // outgoing lets go fast (it is becoming the particles); incoming
       // arrives on its own stagger as they land
-      const rate = i === SH ? 2.2 : 5.5;
+      const rate = i === SH ? 1.9 : 2.4;
       sh.alpha += ((i === SH ? 1 : 0) - sh.alpha) * (1 - Math.exp(-dt * rate));
       if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
       if (done) {
@@ -868,7 +892,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     if (flowT < 1) {
       flowT = Math.min(1, flowT + dt / T.morph.flowDur);
       flowMat.uniforms.uT.value = flowT;
-      flowMat.uniforms.uOpacity.value = Math.min(1, Math.sin(flowT * Math.PI) * 2.2);
+      flowMat.uniforms.uOpacity.value = Math.min(1, Math.sin(flowT * Math.PI) * 1.8);
       if (flowT >= 1) flow.visible = false;
     }
 
@@ -960,7 +984,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
   }
 
   function render() {
-    if (bloomOn && (agentA > 0.02 || flowT < 1)) {
+    if (bloomOn && agentA > 0.02) {
       // 1. emissive objects only, at half res
       const oldLayers = camera.layers.mask;
       camera.layers.mask = bloomLayers.mask;
