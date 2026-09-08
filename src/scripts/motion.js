@@ -93,33 +93,53 @@ function activate(step) {
   });
 }
 
-function initSteps() {
-  const steps = [...document.querySelectorAll('.step')];
-  if (steps.length === 0) return;
+/* Which step is live is computed from geometry on every scroll frame,
+   not inferred from observer callbacks. An observer can miss; measuring
+   cannot, and a wrong answer here used to blank the page. */
+let allSteps = [];
+let stepTick = 0;
 
-  // mark whatever is already on screen so nothing flashes in blurred
-  const vh = window.innerHeight || 800;
+function syncSteps() {
+  stepTick = 0;
+  const vh = window.innerHeight;
+  if (vh < 200 || allSteps.length === 0) return;
+  const mid = vh / 2;
+
   let best = null;
-  let bestDist = Infinity;
-  for (const s of steps) {
+  let bestD = Infinity;
+  for (const s of allSteps) {
     const r = s.getBoundingClientRect();
-    const d = Math.abs(r.top + r.height / 2 - vh / 2);
-    if (r.bottom > 0 && r.top < vh && d < bestDist) {
-      bestDist = d;
+    if (r.bottom <= 0 || r.top >= vh) continue; // off screen entirely
+    const d = Math.abs(r.top + r.height / 2 - mid);
+    if (d < bestD) {
+      bestD = d;
       best = s;
     }
   }
-  activate(best || steps[0]);
+  if (!best) return;
 
-  const io = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) activate(e.target);
-      }
-    },
-    { rootMargin: '-45% 0px -45% 0px' }
-  );
-  steps.forEach((s) => io.observe(s));
+  activate(best);
+
+  // dim only the other steps of the SAME scene, and only while their
+  // own scene is the live one
+  const scene = best.closest('.scene');
+  for (const s of allSteps) {
+    const same = s.closest('.scene') === scene;
+    s.classList.toggle('off', same && s !== best);
+  }
+}
+
+function onScrollSteps() {
+  if (stepTick) return;
+  stepTick = requestAnimationFrame(syncSteps);
+}
+
+function initSteps() {
+  allSteps = [...document.querySelectorAll('.step')];
+  if (allSteps.length === 0) return;
+  syncSteps();
+  window.addEventListener('scroll', onScrollSteps, { passive: true });
+  window.addEventListener('resize', onScrollSteps, { passive: true });
 }
 
 /* ── chapter rail ──────────────────────────────────────────── */
@@ -144,108 +164,6 @@ function initRail() {
     { rootMargin: '-48% 0px -48% 0px' }
   );
   items.forEach((_, t) => io.observe(t));
-}
-
-/* ── snap: tweened, not CSS ────────────────────────────────────
-   The browser's own snap lands instantly, which reads as rigid, and it
-   refuses to let the footer sit on screen. So we settle to the nearest
-   stop ourselves, over a duration scaled by distance (ESQRD run 0.8s to
-   1.8s the same way) on the site easing.
-
-   Two things this must never do: refuse to move because the stop is
-   "too far" (steps sit exactly one screen apart, so the midpoint is
-   half a screen from either — that is what left it stuck halfway), and
-   abort because a trackpad is still coasting (momentum keeps firing
-   wheel events for about a second after your fingers stop). */
-const SNAP_MIN = 780;
-const SNAP_MAX = 1600;
-const WHEEL_INTENT = 10; // px of deliberate input needed to take over
-let snapRAF = 0;
-let snapping = false;
-let programmatic = false;
-let idleTimer = 0;
-
-function stops() {
-  const y = window.scrollY;
-  const list = [...document.querySelectorAll('.step')]
-    .filter((el) => !el.classList.contains('too-tall'))
-    .map((el) => el.getBoundingClientRect().top + y);
-  const footer = document.querySelector('.ftr');
-  if (footer) list.push(footer.getBoundingClientRect().top + y - 8);
-  return list;
-}
-
-function cancelSnap() {
-  if (snapRAF) cancelAnimationFrame(snapRAF);
-  snapRAF = 0;
-  snapping = false;
-  programmatic = false;
-}
-
-function tweenTo(target) {
-  const start = window.scrollY;
-  const delta = target - start;
-  if (Math.abs(delta) < 3) return;
-
-  // longer trips take longer, so nothing ever feels yanked
-  const span = Math.min(1, Math.abs(delta) / Math.max(window.innerHeight, 1));
-  const dur = SNAP_MIN + (SNAP_MAX - SNAP_MIN) * span;
-
-  const t0 = performance.now();
-  snapping = true;
-  const frame = (now) => {
-    if (!snapping) return;
-    const p = Math.min(1, (now - t0) / dur);
-    const e = 0.5 - 0.5 * Math.cos(Math.PI * p); // sine.inOut
-    programmatic = true;
-    window.scrollTo(0, start + delta * e);
-    programmatic = false;
-    if (p < 1) snapRAF = requestAnimationFrame(frame);
-    else cancelSnap();
-  };
-  snapRAF = requestAnimationFrame(frame);
-}
-
-function settle() {
-  if (snapping || reduced) return;
-  const vh = window.innerHeight;
-  if (vh < 200 || !de.classList.contains('snap')) return;
-  // leave the very bottom alone so the footer stays readable
-  if (window.scrollY >= de.scrollHeight - vh - 4) return;
-
-  const y = window.scrollY;
-  let best = null;
-  let bestD = Infinity;
-  for (const t of stops()) {
-    const d = Math.abs(t - y);
-    if (d < bestD) {
-      bestD = d;
-      best = t;
-    }
-  }
-  // always finish the journey — no reach limit, or you stall mid-step
-  if (best !== null && bestD > 3) tweenTo(Math.round(best));
-}
-
-function onScroll() {
-  if (programmatic) return; // our own tween must not restart the clock
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(settle, 170);
-}
-
-if (!reduced) {
-  window.addEventListener('scroll', onScroll, { passive: true });
-  // only deliberate input takes over; coasting momentum does not
-  window.addEventListener(
-    'wheel',
-    (e) => {
-      if (Math.abs(e.deltaY) >= WHEEL_INTENT) cancelSnap();
-    },
-    { passive: true }
-  );
-  ['touchstart', 'keydown', 'pointerdown'].forEach((ev) =>
-    window.addEventListener(ev, cancelSnap, { passive: true })
-  );
 }
 
 /* a step taller than the screen leaves the stop list entirely */

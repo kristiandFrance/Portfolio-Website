@@ -114,7 +114,7 @@ const T = {
   roll: 0.85,
 
   /* the dissolve between one mass and the next */
-  morph: { drawDur: 1.3, flowCount: 1600, flowDur: 1.7 },
+  morph: { drawDur: 1.5, flowCount: 6000, flowDur: 2.3 },
 };
 
 /* which mass each scene wraps. The torus is the honest one: its hole
@@ -574,30 +574,41 @@ export function initOctree({ canvas, posterEl, onReady }) {
     transparent: true,
     depthWrite: false,
     blending: AdditiveBlending,
-    uniforms: { uT: { value: 1 }, uOpacity: { value: 0 }, uColor: { value: C_COPPER.clone() } },
+    uniforms: {
+      uT: { value: 1 },
+      uOpacity: { value: 0 },
+      uColor: { value: new Color('#ffd9c0') },
+      uHot: { value: C_EMBER.clone() },
+    },
     vertexShader: `
       attribute vec3 aFrom; attribute vec3 aTo; attribute float aDelay;
       uniform float uT;
       varying float vA;
+      varying float vT;
       void main() {
         float t = clamp((uT - aDelay * 0.5) / 0.5, 0.0, 1.0);
         float e = t * t * (3.0 - 2.0 * t);
         vec3 pos = mix(aFrom, aTo, e);
         pos += normalize(pos + vec3(0.001)) * sin(e * 3.14159) * 0.45;
-        vA = sin(e * 3.14159);
+        // fade in fast, hold bright across the journey, fade out at the end
+        vA = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.82, 1.0, t));
+        vT = t;
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (2.0 + 4.4 * vA) * (60.0 / -mv.z);
+        gl_PointSize = (2.6 + 3.0 * vA) * (60.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       precision mediump float;
-      uniform float uOpacity; uniform vec3 uColor;
+      uniform float uOpacity; uniform vec3 uColor; uniform vec3 uHot;
       varying float vA;
+      varying float vT;
       void main() {
-        float m = 1.0 - smoothstep(0.15, 0.5, length(gl_PointCoord - 0.5));
-        float a = m * vA * uOpacity * 0.95;
+        float m = 1.0 - smoothstep(0.1, 0.5, length(gl_PointCoord - 0.5));
+        // hottest in flight, cooling as it lands on the new lattice
+        vec3 col = mix(uHot, uColor, smoothstep(0.15, 0.75, vT));
+        float a = m * vA * uOpacity;
         if (a < 0.004) discard;
-        gl_FragColor = vec4(uColor, a);
+        gl_FragColor = vec4(col, a);
       }`,
   });
   const flow = new Points(flowGeo, flowMat);
@@ -857,7 +868,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     if (flowT < 1) {
       flowT = Math.min(1, flowT + dt / T.morph.flowDur);
       flowMat.uniforms.uT.value = flowT;
-      flowMat.uniforms.uOpacity.value = Math.sin(flowT * Math.PI);
+      flowMat.uniforms.uOpacity.value = Math.min(1, Math.sin(flowT * Math.PI) * 2.2);
       if (flowT >= 1) flow.visible = false;
     }
 
@@ -949,7 +960,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
   }
 
   function render() {
-    if (bloomOn && agentA > 0.02) {
+    if (bloomOn && (agentA > 0.02 || flowT < 1)) {
       // 1. emissive objects only, at half res
       const oldLayers = camera.layers.mask;
       camera.layers.mask = bloomLayers.mask;

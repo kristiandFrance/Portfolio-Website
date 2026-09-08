@@ -283,23 +283,18 @@ p {
 }
 
 
-/* only the step you are on carries full contrast — the others sit
-   back through the same focus-pull the reveals use */
+/* The step you are on carries full contrast; ones you have scrolled
+   away from sit back. Visible is the DEFAULT — only a step positively
+   identified as off-centre is dimmed, so a missed frame can never leave
+   a blank screen. */
 html.js .step[data-step] > * {
   transition:
-    opacity 0.7s var(--ease),
-    filter 0.7s var(--ease),
-    transform 0.7s var(--ease);
+    opacity 0.6s var(--ease),
+    filter 0.6s var(--ease);
 }
-html.js .step:not(.on) > * {
-  opacity: 0;
-  filter: blur(10px);
-  transform: translateY(14px);
-}
-html.js .step.on > * {
-  opacity: 1;
-  filter: blur(0);
-  transform: none;
+html.js .step.off > * {
+  opacity: 0.12;
+  filter: blur(7px);
 }
 
 /* Only the scene you are in shows its chrome. Two sticky stages overlap
@@ -382,11 +377,14 @@ html.js .scene:not(.scene--on) .scene__stage > *:not(.oct-anchor) {
 /* Chaptered scroll — the slideshow feel. Engaged only once
    motion.js has marked any overflowing step `.too-tall` and dropped
    it from the snap set, so long content is never trapped. */
-/* Snapping is tweened in motion.js (sine.inOut, ~0.9s) rather than left
-   to the browser's instant CSS snap — that jump is what felt rigid, and
-   it also pulled the footer back out of view. */
-html.snap {
-  scroll-snap-type: none;
+/* Native snap. Engaged only once motion.js has marked any overflowing
+   step `.too-tall` and dropped it from the snap set, so long content is
+   never trapped. `scroll-snap-stop` is left at its default so a flick
+   can carry through several steps instead of catching on every one. */
+@media (min-width: 64rem) {
+  html.snap.snap-ready {
+    scroll-snap-type: y mandatory;
+  }
 }
 
 /* Phones: nothing pins. Steps become ordinary stacked blocks. */
@@ -409,10 +407,9 @@ html.snap {
     padding-top: 1.5rem;
     padding-bottom: 3rem;
   }
-  html.js .step:not(.on) > * {
+  html.js .step.off > * {
     opacity: 1;
     filter: none;
-    transform: none;
   }
 }
 
