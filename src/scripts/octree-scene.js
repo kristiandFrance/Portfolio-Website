@@ -981,9 +981,16 @@ export function initOctree({ canvas, posterEl, onReady }) {
     solidMat.depthWrite = cur.solid > 0.5;
     edgeMat.opacity = cur.solid * 0.14;
     const bodyOn = cur.solid > 0.01 || uLensStrength.value > 0.02;
+    /* the lattice shader compacts cell centres by mix(c, c*0.22, contract),
+       i.e. a factor of 1 - 0.78*contract. The body has to follow or it
+       bulges out of its own lattice on the contracted scenes. */
+    const bodyScale = 1 - 0.78 * cur.contract;
     for (let i = 0; i < shapes.length; i++) {
-      shapes[i].solid.visible = i === SH && bodyOn;
-      shapes[i].edges.visible = i === SH && cur.solid > 0.01;
+      const sh = shapes[i];
+      sh.solid.visible = i === SH && bodyOn;
+      sh.edges.visible = i === SH && cur.solid > 0.01;
+      sh.solid.scale.setScalar(bodyScale);
+      sh.edges.scale.setScalar(bodyScale);
     }
 
     plex.points.material.uniforms.uOpacity.value = cur.plexus * T.plexus.dotOpacity;

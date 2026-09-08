@@ -62,7 +62,8 @@ export const SHAPE_COUNT = 3;
 function displaceCrystal(v) {
   const [x, y, z] = v;
   const spike = Math.abs(Math.sin(2.6 * x) * Math.sin(2.6 * y) * Math.sin(2.6 * z));
-  const s = 0.86 + 0.62 * Math.pow(spike, 0.55) + 0.08 * Math.sin(5.1 * y);
+  // peak must stay inside ROOT_HALF or the spikes fall outside the tree
+  const s = 1.05 + 0.58 * Math.pow(spike, 0.55) + 0.07 * Math.sin(5.1 * y);
   return [x * s, y * s, z * s];
 }
 
