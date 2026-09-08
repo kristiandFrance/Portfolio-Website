@@ -140,16 +140,20 @@ const CELL_EDGES = [
 /* a random point ON a lattice line — not a cell centre. Sampling the
    edges is what makes the dissolve read as the lines themselves coming
    apart, rather than a cloud appearing near the object. */
-function sampleOnLattice(shape, out) {
+function sampleFragment(shape, outA, outB) {
   const lf = shape.leaf;
   const c = lf.cells[(Math.random() * lf.cells.length) | 0];
   const e = CELL_EDGES[(Math.random() * 12) | 0];
-  const t = Math.random();
   const h = lf.half;
-  out[0] = c.x + (e[0] + (e[3] - e[0]) * t) * h;
-  out[1] = c.y + (e[1] + (e[4] - e[1]) * t) * h;
-  out[2] = c.z + (e[2] + (e[5] - e[2]) * t) * h;
-  return out;
+  const t0 = Math.random() * 0.55;
+  const t1 = t0 + 0.45;
+  const o = [c.x, c.y, c.z];
+  for (let k = 0; k < 3; k++) {
+    const a = e[k];
+    const b = e[k + 3];
+    outA[k] = o[k] + (a + (b - a) * t0) * h;
+    outB[k] = o[k] + (a + (b - a) * t1) * h;
+  }
 }
 
 const BLOOM_LAYER = 1;
@@ -578,22 +582,31 @@ export function initOctree({ canvas, posterEl, onReady }) {
      centres and lands on the new ones, while the incoming lattice
      redraws itself with its own per-cell stagger. */
   const FLOW_N = T.morph.flowCount;
+  const FLOW_V = FLOW_N * 2; // a fragment is a segment: two vertices
   const flowGeo = new BufferGeometry();
-  flowGeo.setAttribute('position', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
-  flowGeo.setAttribute('aFrom', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
-  flowGeo.setAttribute('aTo', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
-  const flowDelay = new Float32Array(FLOW_N);
-  const flowDir = new Float32Array(FLOW_N * 3);
+  flowGeo.setAttribute('position', new BufferAttribute(new Float32Array(FLOW_V * 3), 3));
+  flowGeo.setAttribute('aFrom', new BufferAttribute(new Float32Array(FLOW_V * 3), 3));
+  flowGeo.setAttribute('aTo', new BufferAttribute(new Float32Array(FLOW_V * 3), 3));
+  const flowDelay = new Float32Array(FLOW_V);
+  const flowDir = new Float32Array(FLOW_V * 3);
   for (let i = 0; i < FLOW_N; i++) {
-    flowDelay[i] = Math.random();
+    const d = Math.random();
     // random point on a sphere — the detour each particle takes
     const u = Math.random() * 2 - 1;
     const th = Math.random() * Math.PI * 2;
     const r = Math.sqrt(1 - u * u);
     const mag = 0.45 + Math.random() * 0.55;
-    flowDir[i * 3] = Math.cos(th) * r * mag;
-    flowDir[i * 3 + 1] = u * mag;
-    flowDir[i * 3 + 2] = Math.sin(th) * r * mag;
+    const dx = Math.cos(th) * r * mag;
+    const dy = u * mag;
+    const dz = Math.sin(th) * r * mag;
+    // both ends of the fragment share a delay and a detour
+    for (let v = 0; v < 2; v++) {
+      const j = i * 2 + v;
+      flowDelay[j] = d;
+      flowDir[j * 3] = dx;
+      flowDir[j * 3 + 1] = dy;
+      flowDir[j * 3 + 2] = dz;
+    }
   }
   flowGeo.setAttribute('aDelay', new BufferAttribute(flowDelay, 1));
   flowGeo.setAttribute('aDir', new BufferAttribute(flowDir, 3));
@@ -634,9 +647,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
         // fade in fast, hold bright across the journey, fade out at the end
         vA = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.82, 1.0, t));
         vT = t;
-        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (1.5 + 1.2 * vA) * (60.0 / -mv.z);
-        gl_Position = projectionMatrix * mv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }`,
     fragmentShader: `
       precision mediump float;
@@ -644,15 +655,14 @@ export function initOctree({ canvas, posterEl, onReady }) {
       varying float vA;
       varying float vT;
       void main() {
-        float m = 1.0 - smoothstep(0.1, 0.5, length(gl_PointCoord - 0.5));
         // hottest in flight, cooling as it lands on the new lattice
         vec3 col = mix(uHot, uColor, smoothstep(0.15, 0.75, vT));
-        float a = m * vA * uOpacity * 0.85;
+        float a = vA * uOpacity * 0.85;
         if (a < 0.004) discard;
         gl_FragColor = vec4(col, a);
       }`,
   });
-  const flow = new Points(flowGeo, flowMat);
+  const flow = new LineSegments(flowGeo, flowMat);
   /* positions live entirely in the shader, so the geometry's bounding
      sphere is a zero-radius point at the origin — leave culling on and
      the whole swarm vanishes whenever the object nears a screen edge */
@@ -662,16 +672,18 @@ export function initOctree({ canvas, posterEl, onReady }) {
   scene.add(flow);
   let flowT = 1;
 
-  function goShape(next) {
+  function goShape(next, leaving) {
     if (next === SH || !shapes[next]) return;
     const aF = flowGeo.getAttribute('aFrom');
     const aT = flowGeo.getAttribute('aTo');
-    const tmp = [0, 0, 0];
+    const a0 = [0, 0, 0], a1 = [0, 0, 0], b0 = [0, 0, 0], b1 = [0, 0, 0];
     for (let i = 0; i < FLOW_N; i++) {
-      sampleOnLattice(shapes[SH], tmp);
-      aF.setXYZ(i, tmp[0], tmp[1], tmp[2]);
-      sampleOnLattice(shapes[next], tmp);
-      aT.setXYZ(i, tmp[0], tmp[1], tmp[2]);
+      sampleFragment(shapes[SH], a0, a1);
+      sampleFragment(shapes[next], b0, b1);
+      aF.setXYZ(i * 2, a0[0], a0[1], a0[2]);
+      aF.setXYZ(i * 2 + 1, a1[0], a1[1], a1[2]);
+      aT.setXYZ(i * 2, b0[0], b0[1], b0[2]);
+      aT.setXYZ(i * 2 + 1, b1[0], b1[1], b1[2]);
     }
     aF.needsUpdate = true;
     aT.needsUpdate = true;
@@ -680,7 +692,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
 
     /* hand the outgoing lattice to the ghost, pinned to the scene we
        are leaving; the incoming one belongs to the live container */
-    ghostAnchor = activeName;
+    ghostAnchor = leaving || activeName;
     ghostNow.x = now_.x; ghostNow.y = now_.y; ghostNow.s = now_.s;
     for (const l of shapes[SH].lines) ghost.add(l);
     for (const l of shapes[next].lines) group.add(l);
@@ -786,9 +798,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
         if (!e.isIntersecting) continue;
         const n = e.target.dataset.octState;
         if (STATES[n]) {
+          const leaving = activeName; // before we overwrite it
           activeName = n;
           target = STATES[n];
-          if (SCENE_SHAPE[n] !== undefined) goShape(SCENE_SHAPE[n]);
+          if (SCENE_SHAPE[n] !== undefined) goShape(SCENE_SHAPE[n], leaving);
         }
       }
     },
@@ -931,7 +944,11 @@ export function initOctree({ canvas, posterEl, onReady }) {
       sh.alpha += (want - sh.alpha) * (1 - Math.exp(-dt * 3.2));
       if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
       if (done) {
-        const prog = EASE_OUT(sh.drawT);
+        let prog = EASE_OUT(sh.drawT);
+        // the mass being left behind un-draws itself, cell by cell
+        if (flowT < 1 && sh.lines[0].parent === ghost) {
+          prog = 1 - smooth01(flowT, 0.05, 0.8);
+        }
         for (const l of sh.lines) l.material.uniforms.uProgress.value = prog;
       }
     }
@@ -973,10 +990,18 @@ export function initOctree({ canvas, posterEl, onReady }) {
 
     /* DOM anchor drives position + size */
     readAnchor();
-    if (!placed) { placed = true; now_.x = want.x; now_.y = want.y; now_.s = want.s; }
-    now_.x += (want.x - now_.x) * k;
-    now_.y += (want.y - now_.y) * k;
-    now_.s += (want.s - now_.s) * k;
+    if (!placed || dolly) {
+      // snap while the camera is moving, or the lerp lags the shrinking
+      // world size and the object appears to shrink when the dolly ends
+      placed = true;
+      now_.x = want.x;
+      now_.y = want.y;
+      now_.s = want.s;
+    } else {
+      now_.x += (want.x - now_.x) * k;
+      now_.y += (want.y - now_.y) * k;
+      now_.s += (want.s - now_.s) * k;
+    }
     /* the mass you are leaving keeps tracking its own scene's anchor */
     if (ghostAnchor && flowT < 1) {
       const g = { x: ghostNow.x, y: ghostNow.y, s: ghostNow.s };
