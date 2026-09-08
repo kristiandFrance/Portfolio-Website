@@ -365,8 +365,11 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const ghost = new Group();
   ghost.rotation.set(TILT, 0, -0.05);
   scene.add(ghost);
-  let ghostAnchor = null;
-  const ghostNow = { x: 0, y: 0, s: 1 };
+  /* Frozen at hand-off and then carried by scroll. Anchors live inside
+     sticky stages, so tracking one would keep the outgoing mass glued to
+     the window and you would see two octrees at once — it has to move
+     with the PAGE, the way the chain scrolls up out of frame. */
+  const ghostFixed = { x: 0, y: 0, s: 1, scrollY: 0 };
 
   /* ── the octree, once per mass ────────────────────────────── */
   const shapes = [];
@@ -692,8 +695,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
 
     /* hand the outgoing lattice to the ghost, pinned to the scene we
        are leaving; the incoming one belongs to the live container */
-    ghostAnchor = leaving || activeName;
-    ghostNow.x = now_.x; ghostNow.y = now_.y; ghostNow.s = now_.s;
+    ghostFixed.x = now_.x;
+    ghostFixed.y = now_.y;
+    ghostFixed.s = now_.s;
+    ghostFixed.scrollY = window.scrollY;
     for (const l of shapes[SH].lines) ghost.add(l);
     for (const l of shapes[next].lines) group.add(l);
 
@@ -761,19 +766,6 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const want = { x: 0, y: 0, s: 1 };
   const now_ = { x: 0, y: 0, s: 1 };
   let placed = false;
-
-  function readAnchorInto(name, out) {
-    const el = anchorEls.get(name);
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (!el || w === 0 || h === 0) return false;
-    const r = el.getBoundingClientRect();
-    const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
-    const visW = visH * camera.aspect;
-    out.x = ((r.left + r.width / 2) / w - 0.5) * visW;
-    out.y = -((r.top + r.height / 2) / h - 0.5) * visH;
-    out.s = ((r.width / w) * visW) / (ROOT_HALF * 2);
-    return true;
-  }
 
   function readAnchor() {
     const el = anchorEls.get(activeName);
@@ -1002,19 +994,18 @@ export function initOctree({ canvas, posterEl, onReady }) {
       now_.y += (want.y - now_.y) * k;
       now_.s += (want.s - now_.s) * k;
     }
-    /* the mass you are leaving keeps tracking its own scene's anchor */
-    if (ghostAnchor && flowT < 1) {
-      const g = { x: ghostNow.x, y: ghostNow.y, s: ghostNow.s };
-      if (readAnchorInto(ghostAnchor, g)) {
-        ghostNow.x += (g.x - ghostNow.x) * k;
-        ghostNow.y += (g.y - ghostNow.y) * k;
-        ghostNow.s += (g.s - ghostNow.s) * k;
-      }
-      ghost.position.set(ghostNow.x, ghostNow.y, 0);
-      ghost.scale.setScalar(ghostNow.s);
+    /* the mass you are leaving holds its place on the PAGE and scrolls
+       away with it, rather than sticking to the window */
+    if (flowT < 1) {
+      const h = canvas.clientHeight || 1;
+      const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
+      const worldPerPx = visH / h;
+      const scrolled = window.scrollY - ghostFixed.scrollY;
+      ghost.position.set(ghostFixed.x, ghostFixed.y + scrolled * worldPerPx, 0);
+      ghost.scale.setScalar(ghostFixed.s);
       ghost.rotation.copy(group.rotation);
       ghost.visible = true;
-    } else if (ghost.visible && flowT >= 1) {
+    } else if (ghost.visible) {
       ghost.visible = false;
     }
 
@@ -1122,19 +1113,18 @@ export function initOctree({ canvas, posterEl, onReady }) {
     say(`LEVEL 0${MAX_LEVEL} / 0${MAX_LEVEL} · ${totalNodes} NODES`);
     readAnchor();
     now_.x = want.x; now_.y = want.y; now_.s = want.s;
-    /* the mass you are leaving keeps tracking its own scene's anchor */
-    if (ghostAnchor && flowT < 1) {
-      const g = { x: ghostNow.x, y: ghostNow.y, s: ghostNow.s };
-      if (readAnchorInto(ghostAnchor, g)) {
-        ghostNow.x += (g.x - ghostNow.x) * k;
-        ghostNow.y += (g.y - ghostNow.y) * k;
-        ghostNow.s += (g.s - ghostNow.s) * k;
-      }
-      ghost.position.set(ghostNow.x, ghostNow.y, 0);
-      ghost.scale.setScalar(ghostNow.s);
+    /* the mass you are leaving holds its place on the PAGE and scrolls
+       away with it, rather than sticking to the window */
+    if (flowT < 1) {
+      const h = canvas.clientHeight || 1;
+      const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
+      const worldPerPx = visH / h;
+      const scrolled = window.scrollY - ghostFixed.scrollY;
+      ghost.position.set(ghostFixed.x, ghostFixed.y + scrolled * worldPerPx, 0);
+      ghost.scale.setScalar(ghostFixed.s);
       ghost.rotation.copy(group.rotation);
       ghost.visible = true;
-    } else if (ghost.visible && flowT >= 1) {
+    } else if (ghost.visible) {
       ghost.visible = false;
     }
 
