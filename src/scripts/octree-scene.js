@@ -32,6 +32,7 @@ import {
   Layers,
   Line,
   LineBasicMaterial,
+  Matrix4,
   LineSegments,
   Mesh,
   MeshBasicMaterial,
@@ -114,7 +115,7 @@ const T = {
   roll: 0.85,
 
   /* the dissolve between one mass and the next */
-  morph: { drawDur: 1.6, flowCount: 3200, flowDur: 2.8, spread: 2.1 },
+  morph: { drawDur: 1.6, flowCount: 3200, flowDur: 2.8, spread: 0.32 },
 };
 
 /* which mass each scene wraps. The torus is the honest one: its hole
@@ -159,6 +160,10 @@ const C_EMBER = new Color(T.ember);
 const C_SOLID = new Color(T.solid);
 
 const EASE_OUT = (t) => 1 - Math.pow(1 - t, 3);
+const smooth01 = (x, a, b) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 /* Per-chapter object state. Position and scale now come from the DOM
    anchor — these control only opacity, spin, and behaviour. */
@@ -348,6 +353,16 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const TILT = 0.3;
   group.rotation.set(TILT, 0, -0.05);
   scene.add(group);
+
+  /* The outgoing mass keeps tracking the anchor of the scene you are
+     leaving, so it holds its place and drifts away with the page while
+     the new one assembles at the new anchor — both on screen at once,
+     with the swarm bridging them. */
+  const ghost = new Group();
+  ghost.rotation.set(TILT, 0, -0.05);
+  scene.add(ghost);
+  let ghostAnchor = null;
+  const ghostNow = { x: 0, y: 0, s: 1 };
 
   /* ── the octree, once per mass ────────────────────────────── */
   const shapes = [];
@@ -592,6 +607,8 @@ export function initOctree({ canvas, posterEl, onReady }) {
       uT: { value: 1 },
       uOpacity: { value: 0 },
       uSpread: { value: T.morph.spread },
+      uFromMat: { value: new Matrix4() },
+      uToMat: { value: new Matrix4() },
       uColor: { value: new Color('#e8e2dc') },
       uHot: { value: C_EMBER.clone() },
     },
@@ -599,16 +616,20 @@ export function initOctree({ canvas, posterEl, onReady }) {
       attribute vec3 aFrom; attribute vec3 aTo; attribute float aDelay;
       attribute vec3 aDir;
       uniform float uT; uniform float uSpread;
+      uniform mat4 uFromMat; uniform mat4 uToMat;
       varying float vA;
       varying float vT;
       void main() {
         // a long stagger: the swarm leaves in waves rather than at once
         float t = clamp((uT - aDelay * 0.62) / 0.38, 0.0, 1.0);
         float e = t * t * (3.0 - 2.0 * t);
-        vec3 pos = mix(aFrom, aTo, e);
-        // every particle takes its own detour, so the cloud sweeps wide
-        // and converges — without this all three masses share a bounding
-        // box and the journey is too short to see
+        /* endpoints are resolved through each container's world matrix,
+           so the stream stays attached to both masses while they move —
+           the one you are leaving drifts off with the page, the one you
+           are entering settles into its own anchor */
+        vec3 A = (uFromMat * vec4(aFrom, 1.0)).xyz;
+        vec3 B = (uToMat * vec4(aTo, 1.0)).xyz;
+        vec3 pos = mix(A, B, e);
         pos += aDir * sin(e * 3.14159) * uSpread;
         // fade in fast, hold bright across the journey, fade out at the end
         vA = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.82, 1.0, t));
@@ -638,7 +659,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
   flow.frustumCulled = false;
   flow.renderOrder = 4;
   flow.visible = false;
-  group.add(flow);
+  scene.add(flow);
   let flowT = 1;
 
   function goShape(next) {
@@ -656,6 +677,13 @@ export function initOctree({ canvas, posterEl, onReady }) {
     aT.needsUpdate = true;
     flowT = 0;
     flow.visible = true;
+
+    /* hand the outgoing lattice to the ghost, pinned to the scene we
+       are leaving; the incoming one belongs to the live container */
+    ghostAnchor = activeName;
+    ghostNow.x = now_.x; ghostNow.y = now_.y; ghostNow.s = now_.s;
+    for (const l of shapes[SH].lines) ghost.add(l);
+    for (const l of shapes[next].lines) group.add(l);
 
     shapes[next].drawT = 0; // the incoming lattice redraws itself
     SH = next;
@@ -721,6 +749,19 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const want = { x: 0, y: 0, s: 1 };
   const now_ = { x: 0, y: 0, s: 1 };
   let placed = false;
+
+  function readAnchorInto(name, out) {
+    const el = anchorEls.get(name);
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!el || w === 0 || h === 0) return false;
+    const r = el.getBoundingClientRect();
+    const visH = 2 * Math.tan(((camera.fov / 2) * Math.PI) / 180) * camera.position.z;
+    const visW = visH * camera.aspect;
+    out.x = ((r.left + r.width / 2) / w - 0.5) * visW;
+    out.y = -((r.top + r.height / 2) / h - 0.5) * visH;
+    out.s = ((r.width / w) * visW) / (ROOT_HALF * 2);
+    return true;
+  }
 
   function readAnchor() {
     const el = anchorEls.get(activeName);
@@ -879,10 +920,15 @@ export function initOctree({ canvas, posterEl, onReady }) {
        the old cell centres onto the new ones. */
     for (let i = 0; i < shapes.length; i++) {
       const sh = shapes[i];
-      // outgoing lets go fast (it is becoming the particles); incoming
-      // arrives on its own stagger as they land
-      const rate = i === SH ? 1.9 : 2.4;
-      sh.alpha += ((i === SH ? 1 : 0) - sh.alpha) * (1 - Math.exp(-dt * rate));
+      /* During a hand-off the source holds its form while it sheds and
+         only lets go late, and the target builds as the swarm lands —
+         that simultaneity is the whole effect. */
+      let want = i === SH ? 1 : 0;
+      if (flowT < 1) {
+        if (i === SH) want = smooth01(flowT, 0.12, 0.85);
+        else if (shapes[i].lines[0].parent === ghost) want = 1 - smooth01(flowT, 0.5, 1.0);
+      }
+      sh.alpha += (want - sh.alpha) * (1 - Math.exp(-dt * 3.2));
       if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
       if (done) {
         const prog = EASE_OUT(sh.drawT);
@@ -890,6 +936,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
       }
     }
     if (flowT < 1) {
+      group.updateMatrixWorld(true);
+      ghost.updateMatrixWorld(true);
+      flowMat.uniforms.uFromMat.value.copy(ghost.matrixWorld);
+      flowMat.uniforms.uToMat.value.copy(group.matrixWorld);
       flowT = Math.min(1, flowT + dt / T.morph.flowDur);
       flowMat.uniforms.uT.value = flowT;
       flowMat.uniforms.uOpacity.value = Math.min(1, Math.sin(flowT * Math.PI) * 1.8);
@@ -927,6 +977,22 @@ export function initOctree({ canvas, posterEl, onReady }) {
     now_.x += (want.x - now_.x) * k;
     now_.y += (want.y - now_.y) * k;
     now_.s += (want.s - now_.s) * k;
+    /* the mass you are leaving keeps tracking its own scene's anchor */
+    if (ghostAnchor && flowT < 1) {
+      const g = { x: ghostNow.x, y: ghostNow.y, s: ghostNow.s };
+      if (readAnchorInto(ghostAnchor, g)) {
+        ghostNow.x += (g.x - ghostNow.x) * k;
+        ghostNow.y += (g.y - ghostNow.y) * k;
+        ghostNow.s += (g.s - ghostNow.s) * k;
+      }
+      ghost.position.set(ghostNow.x, ghostNow.y, 0);
+      ghost.scale.setScalar(ghostNow.s);
+      ghost.rotation.copy(group.rotation);
+      ghost.visible = true;
+    } else if (ghost.visible && flowT >= 1) {
+      ghost.visible = false;
+    }
+
     group.position.set(now_.x, now_.y, 0);
     /* the object arrives slightly small and settles into frame */
     const introScale = T.dolly.fromScale + (1 - T.dolly.fromScale) * introEase;
@@ -1031,6 +1097,22 @@ export function initOctree({ canvas, posterEl, onReady }) {
     say(`LEVEL 0${MAX_LEVEL} / 0${MAX_LEVEL} · ${totalNodes} NODES`);
     readAnchor();
     now_.x = want.x; now_.y = want.y; now_.s = want.s;
+    /* the mass you are leaving keeps tracking its own scene's anchor */
+    if (ghostAnchor && flowT < 1) {
+      const g = { x: ghostNow.x, y: ghostNow.y, s: ghostNow.s };
+      if (readAnchorInto(ghostAnchor, g)) {
+        ghostNow.x += (g.x - ghostNow.x) * k;
+        ghostNow.y += (g.y - ghostNow.y) * k;
+        ghostNow.s += (g.s - ghostNow.s) * k;
+      }
+      ghost.position.set(ghostNow.x, ghostNow.y, 0);
+      ghost.scale.setScalar(ghostNow.s);
+      ghost.rotation.copy(group.rotation);
+      ghost.visible = true;
+    } else if (ghost.visible && flowT >= 1) {
+      ghost.visible = false;
+    }
+
     group.position.set(now_.x, now_.y, 0);
     /* the object arrives slightly small and settles into frame */
     const introScale = T.dolly.fromScale + (1 - T.dolly.fromScale) * introEase;
