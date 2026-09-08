@@ -173,11 +173,11 @@ const smooth01 = (x, a, b) => {
    anchor — these control only opacity, spin, and behaviour. */
 const STATES = {
   hero: { levels: [0.34, 0.34, 0.38, 0.5, 0.86], solid: 0, contract: 0, spin: 0.05, traverse: false, lens: 1, plexus: 1 },
-  statement: { levels: [0.16, 0.18, 0.22, 0.34, 0.66], solid: 0, contract: 0, spin: 0.09, traverse: true, lens: 0, plexus: 0.85 },
-  shipped: { levels: [0.1, 0.12, 0.15, 0.26, 0.5], solid: 0, contract: 0, spin: 0.11, traverse: true, lens: 0, plexus: 0.6 },
-  projects: { levels: [0.06, 0.08, 0.12, 0.24, 0.46], solid: 0, contract: 0.6, spin: 0.09, traverse: false, lens: 0, plexus: 0.5 },
-  jam: { levels: [0.05, 0.06, 0.09, 0.16, 0.32], solid: 0, contract: 0.35, spin: 0.07, traverse: false, lens: 0, plexus: 0.45 },
-  about: { levels: [0.05, 0.06, 0.08, 0.14, 0.28], solid: 0, contract: 0, spin: 0.02, traverse: false, lens: 0, plexus: 0.4 },
+  statement: { levels: [0.16, 0.18, 0.22, 0.34, 0.66], solid: 0, contract: 0, spin: 0.09, traverse: true, lens: 1, plexus: 0.85 },
+  shipped: { levels: [0.1, 0.12, 0.15, 0.26, 0.5], solid: 0, contract: 0, spin: 0.11, traverse: true, lens: 1, plexus: 0.6 },
+  projects: { levels: [0.06, 0.08, 0.12, 0.24, 0.46], solid: 0, contract: 0.6, spin: 0.09, traverse: false, lens: 1, plexus: 0.5 },
+  jam: { levels: [0.05, 0.06, 0.09, 0.16, 0.32], solid: 0, contract: 0.35, spin: 0.07, traverse: false, lens: 1, plexus: 0.45 },
+  about: { levels: [0.05, 0.06, 0.08, 0.14, 0.28], solid: 0, contract: 0, spin: 0.02, traverse: false, lens: 1, plexus: 0.4 },
   contact: { levels: [0.05, 0.06, 0.07, 0.1, 0.18], solid: 0.92, contract: 0, spin: 0.04, traverse: false, lens: 1, plexus: 0.7 },
 };
 
@@ -383,6 +383,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     }, 0);
     const lf = oct.levels[oct.levels.length - 1];
     shapes.push({
+      src,
       levels: oct.levels,
       totalNodes: oct.totalNodes,
       leaf: lf,
@@ -393,16 +394,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
       lines: null,
     });
   }
-  /* the solid mass is the blob — it is only ever shown in the scenes
-     that use it (the entrance and the reassembly at contact) */
-  const { positions } = buildSourceMesh(2, SHAPES.BLOB);
   let SH = 0;
   let levels = shapes[0].levels;
   let totalNodes = shapes[0].totalNodes;
 
-  const solidGeo = new BufferGeometry();
-  solidGeo.setAttribute('position', new BufferAttribute(positions, 3));
-  solidGeo.computeVertexNormals();
   const solidMat = new MeshLambertMaterial({
     color: C_SOLID, flatShading: true, transparent: true, opacity: 1, side: DoubleSide,
   });
@@ -416,14 +411,23 @@ export function initOctree({ canvas, posterEl, onReady }) {
         float ml = (1.0 - smoothstep(uLens.z * 0.35, uLens.z, dl)) * uLensStrength;
         gl_FragColor.a = max(gl_FragColor.a, ml * ${T.lens.solidShow});`);
   };
-  const solid = new Mesh(solidGeo, solidMat);
-  group.add(solid);
+
 
   const edgeMat = new LineBasicMaterial({ color: C_LINE, transparent: true, opacity: 0.14 });
-  const edges = new LineSegments(new EdgesGeometry(solidGeo, 12), edgeMat);
-  group.add(edges);
+
 
   shapes.forEach((sh, i) => {
+    /* the mass itself — shown first on a hand-off so you watch the
+       octree grab and wrap it, then faded out to leave the lattice */
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(sh.src.positions, 3));
+    g.computeVertexNormals();
+    sh.solid = new Mesh(g, solidMat);
+    sh.edges = new LineSegments(new EdgesGeometry(g, 12), edgeMat);
+    sh.solid.visible = i === 0;
+    sh.edges.visible = i === 0;
+    group.add(sh.solid, sh.edges);
+
     sh.lines = sh.levels.map((lv) => {
       const l = buildLevelLines(lv);
       l.material.uniforms.uProgress.value = i === 0 ? 0 : 1;
@@ -702,7 +706,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     for (const l of shapes[SH].lines) ghost.add(l);
     for (const l of shapes[next].lines) group.add(l);
 
-    shapes[next].drawT = 0; // the incoming lattice redraws itself
+    shapes[next].drawT = -0.5; // hold while the swarm arrives
     SH = next;
     levels = shapes[SH].levels;
     totalNodes = shapes[SH].totalNodes;
@@ -936,7 +940,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
       sh.alpha += (want - sh.alpha) * (1 - Math.exp(-dt * 3.2));
       if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
       if (done) {
-        let prog = EASE_OUT(sh.drawT);
+        let prog = EASE_OUT(Math.max(0, sh.drawT));
         // the mass being left behind un-draws itself, cell by cell
         if (flowT < 1 && sh.lines[0].parent === ghost) {
           prog = 1 - smooth01(flowT, 0.05, 0.8);
@@ -964,7 +968,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
         sh.lines[i].material.uniforms.uContract.value = cur.contract;
       }
     }
-    if (done) cur.solid += (target.solid - cur.solid) * k;
+    /* the reveal: a hand-off shows the bare mass, then the octree draws
+       itself around it and the body fades out from under the lattice */
+    const wrap = 1 - smooth01(Math.max(0, shapes[SH].drawT), 0.42, 1);
+    if (done) cur.solid += (Math.max(target.solid, wrap) - cur.solid) * k;
     cur.contract += ((done ? target.contract : 0) - cur.contract) * k;
     cur.spin += (target.spin - cur.spin) * k;
     cur.plexus += ((done ? target.plexus : 0) - cur.plexus) * k;
@@ -972,9 +979,12 @@ export function initOctree({ canvas, posterEl, onReady }) {
 
     solidMat.opacity = cur.solid;
     solidMat.depthWrite = cur.solid > 0.5;
-    solid.visible = cur.solid > 0.01 || uLensStrength.value > 0.02;
     edgeMat.opacity = cur.solid * 0.14;
-    edges.visible = cur.solid > 0.01;
+    const bodyOn = cur.solid > 0.01 || uLensStrength.value > 0.02;
+    for (let i = 0; i < shapes.length; i++) {
+      shapes[i].solid.visible = i === SH && bodyOn;
+      shapes[i].edges.visible = i === SH && cur.solid > 0.01;
+    }
 
     plex.points.material.uniforms.uOpacity.value = cur.plexus * T.plexus.dotOpacity;
     plex.links.material.opacity = cur.plexus * T.plexus.linkOpacity;
@@ -1106,7 +1116,9 @@ export function initOctree({ canvas, posterEl, onReady }) {
       l.material.uniforms.uProgress.value = 1;
       l.material.uniforms.uOpacity.value = STATES.hero.levels[i];
     });
-    cur.solid = 0; solidMat.opacity = 0; solid.visible = false; edges.visible = false;
+    cur.solid = 0;
+    solidMat.opacity = 0;
+    for (const sh of shapes) { sh.solid.visible = false; sh.edges.visible = false; }
     plex.points.material.uniforms.uOpacity.value = T.plexus.dotOpacity * 0.7;
     plex.links.material.opacity = T.plexus.linkOpacity * 0.7;
     relink(0);
