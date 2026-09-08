@@ -114,20 +114,42 @@ const T = {
   roll: 0.85,
 
   /* the dissolve between one mass and the next */
-  morph: { drawDur: 1.15, flowCount: 900, flowDur: 1.35 },
+  morph: { drawDur: 1.3, flowCount: 1600, flowDur: 1.7 },
 };
 
 /* which mass each scene wraps. The torus is the honest one: its hole
    costs the sparse tree nothing, and you can see that. */
 const SCENE_SHAPE = {
   hero: SHAPES.BLOB,
-  statement: SHAPES.BLOB,
+  statement: SHAPES.CRYSTAL,
   shipped: SHAPES.TORUS,
   projects: SHAPES.CRYSTAL,
-  jam: SHAPES.TORUS,
-  about: SHAPES.BLOB,
-  contact: SHAPES.BLOB,
+  jam: SHAPES.BLOB,
+  about: SHAPES.TORUS,
+  contact: SHAPES.BLOB, // reassembles into the solid it started as
 };
+
+/* the twelve edges of a unit cell, as ±1 endpoint pairs */
+const CELL_EDGES = [
+  [-1, -1, -1, 1, -1, -1], [-1, 1, -1, 1, 1, -1], [-1, -1, 1, 1, -1, 1], [-1, 1, 1, 1, 1, 1],
+  [-1, -1, -1, -1, 1, -1], [1, -1, -1, 1, 1, -1], [-1, -1, 1, -1, 1, 1], [1, -1, 1, 1, 1, 1],
+  [-1, -1, -1, -1, -1, 1], [1, -1, -1, 1, -1, 1], [-1, 1, -1, -1, 1, 1], [1, 1, -1, 1, 1, 1],
+];
+
+/* a random point ON a lattice line — not a cell centre. Sampling the
+   edges is what makes the dissolve read as the lines themselves coming
+   apart, rather than a cloud appearing near the object. */
+function sampleOnLattice(shape, out) {
+  const lf = shape.leaf;
+  const c = lf.cells[(Math.random() * lf.cells.length) | 0];
+  const e = CELL_EDGES[(Math.random() * 12) | 0];
+  const t = Math.random();
+  const h = lf.half;
+  out[0] = c.x + (e[0] + (e[3] - e[0]) * t) * h;
+  out[1] = c.y + (e[1] + (e[4] - e[1]) * t) * h;
+  out[2] = c.z + (e[2] + (e[5] - e[2]) * t) * h;
+  return out;
+}
 
 const BLOOM_LAYER = 1;
 
@@ -558,13 +580,13 @@ export function initOctree({ canvas, posterEl, onReady }) {
       uniform float uT;
       varying float vA;
       void main() {
-        float t = clamp((uT - aDelay * 0.42) / 0.58, 0.0, 1.0);
+        float t = clamp((uT - aDelay * 0.5) / 0.5, 0.0, 1.0);
         float e = t * t * (3.0 - 2.0 * t);
         vec3 pos = mix(aFrom, aTo, e);
-        pos += normalize(pos + vec3(0.001)) * sin(e * 3.14159) * 0.3;
+        pos += normalize(pos + vec3(0.001)) * sin(e * 3.14159) * 0.45;
         vA = sin(e * 3.14159);
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = (1.6 + 3.2 * vA) * (60.0 / -mv.z);
+        gl_PointSize = (2.0 + 4.4 * vA) * (60.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
@@ -573,7 +595,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
       varying float vA;
       void main() {
         float m = 1.0 - smoothstep(0.15, 0.5, length(gl_PointCoord - 0.5));
-        float a = m * vA * uOpacity * 0.5;
+        float a = m * vA * uOpacity * 0.95;
         if (a < 0.004) discard;
         gl_FragColor = vec4(uColor, a);
       }`,
@@ -586,15 +608,14 @@ export function initOctree({ canvas, posterEl, onReady }) {
 
   function goShape(next) {
     if (next === SH || !shapes[next]) return;
-    const from = shapes[SH].leaf.cells;
-    const to = shapes[next].leaf.cells;
     const aF = flowGeo.getAttribute('aFrom');
     const aT = flowGeo.getAttribute('aTo');
+    const tmp = [0, 0, 0];
     for (let i = 0; i < FLOW_N; i++) {
-      const a = from[(Math.random() * from.length) | 0];
-      const b = to[(Math.random() * to.length) | 0];
-      aF.setXYZ(i, a.x, a.y, a.z);
-      aT.setXYZ(i, b.x, b.y, b.z);
+      sampleOnLattice(shapes[SH], tmp);
+      aF.setXYZ(i, tmp[0], tmp[1], tmp[2]);
+      sampleOnLattice(shapes[next], tmp);
+      aT.setXYZ(i, tmp[0], tmp[1], tmp[2]);
     }
     aF.needsUpdate = true;
     aT.needsUpdate = true;
@@ -823,7 +844,10 @@ export function initOctree({ canvas, posterEl, onReady }) {
        the old cell centres onto the new ones. */
     for (let i = 0; i < shapes.length; i++) {
       const sh = shapes[i];
-      sh.alpha += ((i === SH ? 1 : 0) - sh.alpha) * (1 - Math.exp(-dt * 2.6));
+      // outgoing lets go fast (it is becoming the particles); incoming
+      // arrives on its own stagger as they land
+      const rate = i === SH ? 2.2 : 5.5;
+      sh.alpha += ((i === SH ? 1 : 0) - sh.alpha) * (1 - Math.exp(-dt * rate));
       if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
       if (done) {
         const prog = EASE_OUT(sh.drawT);

@@ -147,14 +147,22 @@ function initRail() {
 }
 
 /* ── snap: tweened, not CSS ────────────────────────────────────
-   The browser's mandatory snap lands instantly, which reads as rigid,
-   and it refuses to let the footer sit on screen. So we settle to the
-   nearest stop ourselves with the site easing, and any real input
-   cancels it mid-flight. Stops are the steps plus the footer. */
-const SNAP_MS = 900;
-const SNAP_REACH = 0.55; // only pull if within this share of a screen
+   The browser's own snap lands instantly, which reads as rigid, and it
+   refuses to let the footer sit on screen. So we settle to the nearest
+   stop ourselves, over a duration scaled by distance (ESQRD run 0.8s to
+   1.8s the same way) on the site easing.
+
+   Two things this must never do: refuse to move because the stop is
+   "too far" (steps sit exactly one screen apart, so the midpoint is
+   half a screen from either — that is what left it stuck halfway), and
+   abort because a trackpad is still coasting (momentum keeps firing
+   wheel events for about a second after your fingers stop). */
+const SNAP_MIN = 780;
+const SNAP_MAX = 1600;
+const WHEEL_INTENT = 10; // px of deliberate input needed to take over
 let snapRAF = 0;
 let snapping = false;
+let programmatic = false;
 let idleTimer = 0;
 
 function stops() {
@@ -171,19 +179,28 @@ function cancelSnap() {
   if (snapRAF) cancelAnimationFrame(snapRAF);
   snapRAF = 0;
   snapping = false;
+  programmatic = false;
 }
 
 function tweenTo(target) {
   const start = window.scrollY;
   const delta = target - start;
   if (Math.abs(delta) < 3) return;
+
+  // longer trips take longer, so nothing ever feels yanked
+  const span = Math.min(1, Math.abs(delta) / Math.max(window.innerHeight, 1));
+  const dur = SNAP_MIN + (SNAP_MAX - SNAP_MIN) * span;
+
   const t0 = performance.now();
   snapping = true;
   const frame = (now) => {
-    const p = Math.min(1, (now - t0) / SNAP_MS);
+    if (!snapping) return;
+    const p = Math.min(1, (now - t0) / dur);
     const e = 0.5 - 0.5 * Math.cos(Math.PI * p); // sine.inOut
+    programmatic = true;
     window.scrollTo(0, start + delta * e);
-    if (p < 1 && snapping) snapRAF = requestAnimationFrame(frame);
+    programmatic = false;
+    if (p < 1) snapRAF = requestAnimationFrame(frame);
     else cancelSnap();
   };
   snapRAF = requestAnimationFrame(frame);
@@ -194,8 +211,7 @@ function settle() {
   const vh = window.innerHeight;
   if (vh < 200 || !de.classList.contains('snap')) return;
   // leave the very bottom alone so the footer stays readable
-  const max = de.scrollHeight - vh;
-  if (window.scrollY >= max - 4) return;
+  if (window.scrollY >= de.scrollHeight - vh - 4) return;
 
   const y = window.scrollY;
   let best = null;
@@ -207,17 +223,27 @@ function settle() {
       best = t;
     }
   }
-  if (best !== null && bestD > 3 && bestD < vh * SNAP_REACH) tweenTo(Math.round(best));
+  // always finish the journey — no reach limit, or you stall mid-step
+  if (best !== null && bestD > 3) tweenTo(Math.round(best));
 }
 
 function onScroll() {
+  if (programmatic) return; // our own tween must not restart the clock
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(settle, 140);
+  idleTimer = setTimeout(settle, 170);
 }
 
 if (!reduced) {
   window.addEventListener('scroll', onScroll, { passive: true });
-  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((ev) =>
+  // only deliberate input takes over; coasting momentum does not
+  window.addEventListener(
+    'wheel',
+    (e) => {
+      if (Math.abs(e.deltaY) >= WHEEL_INTENT) cancelSnap();
+    },
+    { passive: true }
+  );
+  ['touchstart', 'keydown', 'pointerdown'].forEach((ev) =>
     window.addEventListener(ev, cancelSnap, { passive: true })
   );
 }
