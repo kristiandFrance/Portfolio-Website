@@ -85,5 +85,5 @@ gizmos and two components — a volume and an agent:
 
 Solo project, built as a Unity plugin in C#. It exists because I wanted to
 understand the structure properly — not read about it, build it. If you'd
-like to see it running, [email me](mailto:krisdfrance@gmail.com) and I'll
+like to see it running, [email me](mailto:kris@kdfr.nz) and I'll
 show you.

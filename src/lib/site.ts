@@ -5,7 +5,7 @@ export const SITE = {
   title: 'Kristian de France — Software Engineer, Auckland NZ',
   description:
     'Systems-oriented software engineer in Auckland, New Zealand. C++ and C#: engine systems, AI navigation, cloth simulation, and a shipped Steam title.',
-  email: 'krisdfrance@gmail.com',
+  email: 'kris@kdfr.nz',
   location: 'Auckland, New Zealand',
   github: 'https://github.com/kristiandFrance',
   linkedin: 'https://www.linkedin.com/in/kristian-defrance/',
