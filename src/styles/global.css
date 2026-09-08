@@ -281,15 +281,7 @@ p {
   align-content: center;
   scroll-snap-align: start;
 }
-/* a flick may move between steps inside a scene, but must never
-   skip a whole scene */
-.scene > .step:first-of-type {
-  scroll-snap-stop: always;
-}
-.step.too-tall {
-  scroll-snap-align: none;
-  scroll-snap-stop: normal;
-}
+
 
 /* only the step you are on carries full contrast — the others sit
    back through the same focus-pull the reveals use */
@@ -308,6 +300,16 @@ html.js .step.on > * {
   opacity: 1;
   filter: blur(0);
   transform: none;
+}
+
+/* Only the scene you are in shows its chrome. Two sticky stages overlap
+   at every boundary, which is what made the eyebrows collide. */
+html.js .scene__stage > *:not(.oct-anchor) {
+  transition: opacity 0.45s var(--ease);
+}
+html.js .scene:not(.scene--on) .scene__stage > *:not(.oct-anchor) {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* the chapter chrome that stays put while steps pass under it */
@@ -380,10 +382,11 @@ html.js .step.on > * {
 /* Chaptered scroll — the slideshow feel. Engaged only once
    motion.js has marked any overflowing step `.too-tall` and dropped
    it from the snap set, so long content is never trapped. */
-@media (min-width: 64rem) {
-  html.snap.snap-ready {
-    scroll-snap-type: y mandatory;
-  }
+/* Snapping is tweened in motion.js (sine.inOut, ~0.9s) rather than left
+   to the browser's instant CSS snap — that jump is what felt rigid, and
+   it also pulled the footer back out of view. */
+html.snap {
+  scroll-snap-type: none;
 }
 
 /* Phones: nothing pins. Steps become ordinary stacked blocks. */
@@ -405,7 +408,6 @@ html.js .step.on > * {
     min-height: 0;
     padding-top: 1.5rem;
     padding-bottom: 3rem;
-    scroll-snap-align: none;
   }
   html.js .step:not(.on) > * {
     opacity: 1;
@@ -415,23 +417,16 @@ html.js .step.on > * {
 }
 
 /* edge vignettes fuse the scenes with the 3D layer behind them */
-.scene__stage::before,
-.scene__stage::after {
+.scene__stage::before {
   content: '';
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  height: 12svh;
+  height: 7svh;
   pointer-events: none;
   z-index: 0;
-}
-.scene__stage::before {
-  top: 0;
-  background: linear-gradient(to bottom, var(--ground) 6%, transparent);
-}
-.scene__stage::after {
-  bottom: 0;
-  background: linear-gradient(to top, var(--ground) 6%, transparent);
+  background: linear-gradient(to bottom, var(--ground), transparent);
 }
 
 /* chapter head: eyebrow + meta left, thin counter right */

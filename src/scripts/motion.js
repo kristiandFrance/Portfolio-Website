@@ -79,6 +79,11 @@ function activate(step) {
   scene.querySelectorAll(':scope > .step').forEach((s) => s.classList.remove('on'));
   step.classList.add('on');
 
+  document.querySelectorAll('.scene--on').forEach((el) => {
+    if (el !== scene) el.classList.remove('scene--on');
+  });
+  scene.classList.add('scene--on');
+
   const idx = Number(step.dataset.step || 0);
   scene.dataset.activeStep = String(idx);
   de.dataset.octStep = String(idx);
@@ -141,17 +146,86 @@ function initRail() {
   items.forEach((_, t) => io.observe(t));
 }
 
-/* ── snap hygiene ──────────────────────────────────────────────
-   A step taller than the screen leaves the snap candidates so it can
-   never trap the scroll. Guarded against a zero-height viewport — a
-   hidden or bfcached tab reports 0, which would otherwise mark every
-   step too-tall and silently kill snapping. */
+/* ── snap: tweened, not CSS ────────────────────────────────────
+   The browser's mandatory snap lands instantly, which reads as rigid,
+   and it refuses to let the footer sit on screen. So we settle to the
+   nearest stop ourselves with the site easing, and any real input
+   cancels it mid-flight. Stops are the steps plus the footer. */
+const SNAP_MS = 900;
+const SNAP_REACH = 0.55; // only pull if within this share of a screen
+let snapRAF = 0;
+let snapping = false;
+let idleTimer = 0;
+
+function stops() {
+  const y = window.scrollY;
+  const list = [...document.querySelectorAll('.step')]
+    .filter((el) => !el.classList.contains('too-tall'))
+    .map((el) => el.getBoundingClientRect().top + y);
+  const footer = document.querySelector('.ftr');
+  if (footer) list.push(footer.getBoundingClientRect().top + y - 8);
+  return list;
+}
+
+function cancelSnap() {
+  if (snapRAF) cancelAnimationFrame(snapRAF);
+  snapRAF = 0;
+  snapping = false;
+}
+
+function tweenTo(target) {
+  const start = window.scrollY;
+  const delta = target - start;
+  if (Math.abs(delta) < 3) return;
+  const t0 = performance.now();
+  snapping = true;
+  const frame = (now) => {
+    const p = Math.min(1, (now - t0) / SNAP_MS);
+    const e = 0.5 - 0.5 * Math.cos(Math.PI * p); // sine.inOut
+    window.scrollTo(0, start + delta * e);
+    if (p < 1 && snapping) snapRAF = requestAnimationFrame(frame);
+    else cancelSnap();
+  };
+  snapRAF = requestAnimationFrame(frame);
+}
+
+function settle() {
+  if (snapping || reduced) return;
+  const vh = window.innerHeight;
+  if (vh < 200 || !de.classList.contains('snap')) return;
+  // leave the very bottom alone so the footer stays readable
+  const max = de.scrollHeight - vh;
+  if (window.scrollY >= max - 4) return;
+
+  const y = window.scrollY;
+  let best = null;
+  let bestD = Infinity;
+  for (const t of stops()) {
+    const d = Math.abs(t - y);
+    if (d < bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  if (best !== null && bestD > 3 && bestD < vh * SNAP_REACH) tweenTo(Math.round(best));
+}
+
+function onScroll() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(settle, 140);
+}
+
+if (!reduced) {
+  window.addEventListener('scroll', onScroll, { passive: true });
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((ev) =>
+    window.addEventListener(ev, cancelSnap, { passive: true })
+  );
+}
+
+/* a step taller than the screen leaves the stop list entirely */
 let snapTries = 0;
 function fitSnap() {
   const vh = window.innerHeight;
-  // A hidden or bfcached tab reports 0 and would mark every step
-  // too-tall. Don't measure — but don't give up either, or snapping
-  // never arms once the tab becomes visible.
   if (vh < 200) {
     if (snapTries++ < 60) setTimeout(fitSnap, 250);
     return;

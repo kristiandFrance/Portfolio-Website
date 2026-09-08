@@ -55,6 +55,8 @@ import {
   chaikin,
   MAX_LEVEL,
   ROOT_HALF,
+  SHAPES,
+  SHAPE_COUNT,
 } from '../lib/octree-build.js';
 
 /* ══════════════════════════════════════════════════════════════
@@ -110,6 +112,21 @@ const T = {
 
   /* how far the object turns when a scene advances a step */
   roll: 0.85,
+
+  /* the dissolve between one mass and the next */
+  morph: { drawDur: 1.15, flowCount: 900, flowDur: 1.35 },
+};
+
+/* which mass each scene wraps. The torus is the honest one: its hole
+   costs the sparse tree nothing, and you can see that. */
+const SCENE_SHAPE = {
+  hero: SHAPES.BLOB,
+  statement: SHAPES.BLOB,
+  shipped: SHAPES.TORUS,
+  projects: SHAPES.CRYSTAL,
+  jam: SHAPES.TORUS,
+  about: SHAPES.BLOB,
+  contact: SHAPES.BLOB,
 };
 
 const BLOOM_LAYER = 1;
@@ -310,9 +327,34 @@ export function initOctree({ canvas, posterEl, onReady }) {
   group.rotation.set(TILT, 0, -0.05);
   scene.add(group);
 
-  /* ── the octree ───────────────────────────────────────────── */
-  const { positions, triCount } = buildSourceMesh(2);
-  const { levels, totalNodes } = buildOctree(positions, triCount, MAX_LEVEL);
+  /* ── the octree, once per mass ────────────────────────────── */
+  const shapes = [];
+  for (let i = 0; i < SHAPE_COUNT; i++) {
+    const src = buildSourceMesh(2, i);
+    const oct = buildOctree(src.positions, src.triCount, MAX_LEVEL);
+    const cumulative = [];
+    oct.levels.reduce((a, lv) => {
+      cumulative.push(a + lv.cells.length);
+      return a + lv.cells.length;
+    }, 0);
+    const lf = oct.levels[oct.levels.length - 1];
+    shapes.push({
+      levels: oct.levels,
+      totalNodes: oct.totalNodes,
+      leaf: lf,
+      neighbours: buildLeafGraph(lf).neighbours,
+      cum: cumulative,
+      alpha: i === 0 ? 1 : 0,
+      drawT: i === 0 ? 1 : 0,
+      lines: null,
+    });
+  }
+  /* the solid mass is the blob — it is only ever shown in the scenes
+     that use it (the entrance and the reassembly at contact) */
+  const { positions } = buildSourceMesh(2, SHAPES.BLOB);
+  let SH = 0;
+  let levels = shapes[0].levels;
+  let totalNodes = shapes[0].totalNodes;
 
   const solidGeo = new BufferGeometry();
   solidGeo.setAttribute('position', new BufferAttribute(positions, 3));
@@ -337,13 +379,17 @@ export function initOctree({ canvas, posterEl, onReady }) {
   const edges = new LineSegments(new EdgesGeometry(solidGeo, 12), edgeMat);
   group.add(edges);
 
-  const levelLines = levels.map((lv) => {
-    const l = buildLevelLines(lv);
-    group.add(l);
-    return l;
+  shapes.forEach((sh, i) => {
+    sh.lines = sh.levels.map((lv) => {
+      const l = buildLevelLines(lv);
+      l.material.uniforms.uProgress.value = i === 0 ? 0 : 1;
+      group.add(l);
+      return l;
+    });
+    sh.lines[MAX_LEVEL].material.uniforms.uAgentGlow.value = 1;
+    sh.lines[MAX_LEVEL - 1].material.uniforms.uAgentGlow.value = 0.45;
   });
-  levelLines[MAX_LEVEL].material.uniforms.uAgentGlow.value = 1;
-  levelLines[MAX_LEVEL - 1].material.uniforms.uAgentGlow.value = 0.45;
+  let levelLines = shapes[0].lines;
 
   /* ── plexus ───────────────────────────────────────────────── */
   const plex = buildPlexus(desktop.matches ? T.plexus.count : T.plexus.countMobile);
@@ -353,8 +399,8 @@ export function initOctree({ canvas, posterEl, onReady }) {
   scene.add(plexGroup);
 
   /* ── the A* agent (on the BLOOM layer) ────────────────────── */
-  const leaf = levels[levels.length - 1];
-  const { neighbours } = buildLeafGraph(leaf);
+  let leaf = shapes[0].leaf;
+  let neighbours = shapes[0].neighbours;
   const leafSize = leaf.half * 2 * 0.92;
 
   const boid = new Group();
@@ -490,6 +536,85 @@ export function initOctree({ canvas, posterEl, onReady }) {
     if (travel >= totalLen) nextPath();
   }
 
+  /* ══ the dissolve ═══════════════════════════════════════════
+     When the mass changes, a stream of points leaves the old cell
+     centres and lands on the new ones, while the incoming lattice
+     redraws itself with its own per-cell stagger. */
+  const FLOW_N = T.morph.flowCount;
+  const flowGeo = new BufferGeometry();
+  flowGeo.setAttribute('position', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
+  flowGeo.setAttribute('aFrom', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
+  flowGeo.setAttribute('aTo', new BufferAttribute(new Float32Array(FLOW_N * 3), 3));
+  const flowDelay = new Float32Array(FLOW_N);
+  for (let i = 0; i < FLOW_N; i++) flowDelay[i] = Math.random();
+  flowGeo.setAttribute('aDelay', new BufferAttribute(flowDelay, 1));
+  const flowMat = new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: AdditiveBlending,
+    uniforms: { uT: { value: 1 }, uOpacity: { value: 0 }, uColor: { value: C_COPPER.clone() } },
+    vertexShader: `
+      attribute vec3 aFrom; attribute vec3 aTo; attribute float aDelay;
+      uniform float uT;
+      varying float vA;
+      void main() {
+        float t = clamp((uT - aDelay * 0.42) / 0.58, 0.0, 1.0);
+        float e = t * t * (3.0 - 2.0 * t);
+        vec3 pos = mix(aFrom, aTo, e);
+        pos += normalize(pos + vec3(0.001)) * sin(e * 3.14159) * 0.3;
+        vA = sin(e * 3.14159);
+        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+        gl_PointSize = (1.6 + 3.2 * vA) * (60.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      precision mediump float;
+      uniform float uOpacity; uniform vec3 uColor;
+      varying float vA;
+      void main() {
+        float m = 1.0 - smoothstep(0.15, 0.5, length(gl_PointCoord - 0.5));
+        float a = m * vA * uOpacity * 0.5;
+        if (a < 0.004) discard;
+        gl_FragColor = vec4(uColor, a);
+      }`,
+  });
+  const flow = new Points(flowGeo, flowMat);
+  flow.layers.enable(BLOOM_LAYER);
+  flow.visible = false;
+  group.add(flow);
+  let flowT = 1;
+
+  function goShape(next) {
+    if (next === SH || !shapes[next]) return;
+    const from = shapes[SH].leaf.cells;
+    const to = shapes[next].leaf.cells;
+    const aF = flowGeo.getAttribute('aFrom');
+    const aT = flowGeo.getAttribute('aTo');
+    for (let i = 0; i < FLOW_N; i++) {
+      const a = from[(Math.random() * from.length) | 0];
+      const b = to[(Math.random() * to.length) | 0];
+      aF.setXYZ(i, a.x, a.y, a.z);
+      aT.setXYZ(i, b.x, b.y, b.z);
+    }
+    aF.needsUpdate = true;
+    aT.needsUpdate = true;
+    flowT = 0;
+    flow.visible = true;
+
+    shapes[next].drawT = 0; // the incoming lattice redraws itself
+    SH = next;
+    levels = shapes[SH].levels;
+    totalNodes = shapes[SH].totalNodes;
+    levelLines = shapes[SH].lines;
+    leaf = shapes[SH].leaf;
+    neighbours = shapes[SH].neighbours;
+    cum = shapes[SH].cum;
+    // the agent's graph just changed under it
+    path = null;
+    smooth = null;
+    cursorCell = (Math.random() * leaf.cells.length) | 0;
+  }
+
   /* ══ selective bloom: half-res, two-pass blur, additive ═════ */
   const bloomLayers = new Layers();
   bloomLayers.set(BLOOM_LAYER);
@@ -563,7 +688,11 @@ export function initOctree({ canvas, posterEl, onReady }) {
       for (const e of es) {
         if (!e.isIntersecting) continue;
         const n = e.target.dataset.octState;
-        if (STATES[n]) { activeName = n; target = STATES[n]; }
+        if (STATES[n]) {
+          activeName = n;
+          target = STATES[n];
+          if (SCENE_SHAPE[n] !== undefined) goShape(SCENE_SHAPE[n]);
+        }
       }
     },
     { rootMargin: '-45% 0px -45% 0px' }
@@ -590,8 +719,7 @@ export function initOctree({ canvas, posterEl, onReady }) {
     lastRead = txt;
     for (const el of readouts) el.textContent = txt;
   }
-  const cum = [];
-  levels.reduce((a, lv) => { cum.push(a + lv.cells.length); return a + lv.cells.length; }, 0);
+  let cum = shapes[0].cum;
 
   let baseFov = T.fov;
   /* dolly runs once, when the preloader hands over */
@@ -689,12 +817,34 @@ export function initOctree({ canvas, posterEl, onReady }) {
     }
     const done = loadT === Infinity;
 
+    /* ── the mass, and the dissolve between masses ────────────
+       The outgoing lattice fades, the incoming one redraws itself
+       with its own per-cell stagger, and a stream of points carries
+       the old cell centres onto the new ones. */
+    for (let i = 0; i < shapes.length; i++) {
+      const sh = shapes[i];
+      sh.alpha += ((i === SH ? 1 : 0) - sh.alpha) * (1 - Math.exp(-dt * 2.6));
+      if (sh.drawT < 1) sh.drawT = Math.min(1, sh.drawT + dt / T.morph.drawDur);
+      if (done) {
+        const prog = EASE_OUT(sh.drawT);
+        for (const l of sh.lines) l.material.uniforms.uProgress.value = prog;
+      }
+    }
+    if (flowT < 1) {
+      flowT = Math.min(1, flowT + dt / T.morph.flowDur);
+      flowMat.uniforms.uT.value = flowT;
+      flowMat.uniforms.uOpacity.value = Math.sin(flowT * Math.PI);
+      if (flowT >= 1) flow.visible = false;
+    }
+
     const k = 1 - Math.exp(-dt * 3.4);
     for (let i = 0; i < 5; i++) {
       const g = done ? target.levels[i] : STATES.hero.levels[i];
       cur.levels[i] += (g - cur.levels[i]) * k;
-      levelLines[i].material.uniforms.uOpacity.value = cur.levels[i];
-      levelLines[i].material.uniforms.uContract.value = cur.contract;
+      for (const sh of shapes) {
+        sh.lines[i].material.uniforms.uOpacity.value = cur.levels[i] * sh.alpha;
+        sh.lines[i].material.uniforms.uContract.value = cur.contract;
+      }
     }
     if (done) cur.solid += (target.solid - cur.solid) * k;
     cur.contract += ((done ? target.contract : 0) - cur.contract) * k;

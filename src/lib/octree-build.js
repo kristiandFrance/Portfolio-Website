@@ -52,11 +52,49 @@ function displace(v) {
   return [x * s, y * s, z * s];
 }
 
+/* The object is not always the same mass. Each shape gives the octree a
+   different problem to solve, and the difference is legible: the torus
+   has a hole, so the sparse tree spends nothing on the middle. */
+export const SHAPES = { BLOB: 0, TORUS: 1, CRYSTAL: 2 };
+export const SHAPE_COUNT = 3;
+
+/** spiky faceted variant — same sphere, high-frequency displacement */
+function displaceCrystal(v) {
+  const [x, y, z] = v;
+  const spike = Math.abs(Math.sin(2.6 * x) * Math.sin(2.6 * y) * Math.sin(2.6 * z));
+  const s = 0.86 + 0.62 * Math.pow(spike, 0.55) + 0.08 * Math.sin(5.1 * y);
+  return [x * s, y * s, z * s];
+}
+
+/** torus as a non-indexed triangle soup, hole facing the camera */
+function torusSoup(R = 1.02, r = 0.4, N = 44, M = 22) {
+  const at = (i, j) => {
+    const u = ((i % N) / N) * Math.PI * 2;
+    const v = ((j % M) / M) * Math.PI * 2;
+    const w = R + r * Math.cos(v);
+    return [w * Math.cos(u), w * Math.sin(u), r * Math.sin(v)];
+  };
+  const tris = [];
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < M; j++) {
+      const a = at(i, j);
+      const b = at(i + 1, j);
+      const c = at(i + 1, j + 1);
+      const d = at(i, j + 1);
+      tris.push(a, b, c, a, c, d);
+    }
+  }
+  const positions = new Float32Array(tris.length * 3);
+  tris.forEach((t, i) => positions.set(t, i * 3));
+  return { positions, triCount: tris.length / 3 };
+}
+
 /**
  * Returns { positions: Float32Array (non-indexed triangle soup),
  *           triCount: number }
  */
-export function buildSourceMesh(detail = 2) {
+export function buildSourceMesh(detail = 2, shape = 0) {
+  if (shape === SHAPES.TORUS) return torusSoup();
   let verts = ICO_VERTS.map(normalize);
   let faces = ICO_FACES.slice();
 
@@ -80,7 +118,7 @@ export function buildSourceMesh(detail = 2) {
     faces = next;
   }
 
-  const displaced = verts.map(displace);
+  const displaced = verts.map(shape === SHAPES.CRYSTAL ? displaceCrystal : displace);
   const positions = new Float32Array(faces.length * 9);
   let o = 0;
   for (const [a, b, c] of faces) {
